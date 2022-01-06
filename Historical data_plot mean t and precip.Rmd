@@ -1,0 +1,66 @@
+---
+title: "Uganda historical"
+output: html_notebook
+---
+
+
+```{r}
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+library(tidyr)
+library(dplyr)
+```
+
+# Read data
+
+The file below contains monthly data for Uganda between 1979-2014. 
+
+```{r}
+data <- read.csv("1979-2019_monthly_Uganda.csv", header = TRUE)
+```
+
+# Derive means (t + precip)
+
+Aim: get monthly mean t and rainfall across all years. 
+
+```{r}
+# Precipitation
+monthly_pr<-aggregate(pr ~ month, data=data, mean, na.rm=TRUE)
+
+# for checking pr.where(month == 1) = 43.67578
+# pr_1 <- filter(data, month==1)
+# pr_1 <- select(pr_1, month, pr)
+# pr_1_mean <- aggregate(pr~month, data=pr_1, mean, na.rm=TRUE) 
+
+# Temperature
+monthly_tas<-aggregate(cbind(tasmax,tasmin) ~ month, data=data, mean, na.rm=TRUE)
+monthly_tas$tas<-rowMeans(monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)
+
+# for checking tas.where(month == 1): tasmax=31.1976 and tasmin=16.87967
+#tas_1 <- filter(data, month==1)
+#tas_1 <- select(tas_1, month, tasmin, tasmax)
+#tas_1_mean <- aggregate(cbind(tasmax,tasmin)~month, data=tas_1, mean, na.rm=TRUE)
+
+# Combine
+monthly_hist_means<-monthly_pr
+monthly_hist_means$tas<-monthly_tas$tas
+```
+
+
+# Derive maps 
+
+```{r}
+map_hist_mean <- 
+  ggplot(data=monthly_hist_means, aes(x=month)) +
+  geom_bar(stat="identity", aes(y=pr))+ 
+  geom_point(aes(y = tas* 6), color="#008080", size=2) + 
+  geom_smooth(aes(y = tas * 6), color="#008080", size=1) +
+  scale_x_continuous(breaks = pretty_breaks()) + # to get rid of doubles on the x axis
+  scale_y_continuous(name="Precipitation", sec.axis = sec_axis(~ . / 6, name="Temperature"))+
+  theme_bw()+
+  theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
+  theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
+plot(map_hist_mean)
+```

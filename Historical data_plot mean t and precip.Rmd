@@ -1,16 +1,15 @@
 ---
-title: "Uganda historical"
+title: "Uganda historical mean t and precip graphs"
 output: html_notebook
 ---
 
 
 ```{r}
-library(ggplot2) #for mapping with ggplot
-library(scales)  #for colour scales
-library(RColorBrewer) #for colour scales
-library(rgdal) #reading shape files
+library(ggplot2) 
 library(tidyr)
 library(dplyr)
+library(scales)  #for sec axis
+library(berryFunctions) # for the last two maps
 ```
 
 # Read data
@@ -19,15 +18,20 @@ The file below contains monthly data for Uganda between 1979-2014.
 
 ```{r}
 data <- read.csv("1979-2019_monthly_Uganda.csv", header = TRUE)
+# head(data)
+# data format:
+# lon | lat | year | month | pr | tasmin | tasmax
 ```
 
-# Derive means (t + precip)
+# Prepare data
 
-Aim: get monthly mean t and rainfall across all years. 
+Get monthly mean t and rainfall across all years. 
 
 ```{r}
 # Precipitation
 monthly_pr<-aggregate(pr ~ month, data=data, mean, na.rm=TRUE)
+# data format:
+# month | pr
 
 # for checking pr.where(month == 1) = 43.67578
 # pr_1 <- filter(data, month==1)
@@ -36,9 +40,11 @@ monthly_pr<-aggregate(pr ~ month, data=data, mean, na.rm=TRUE)
 
 # Temperature
 monthly_tas<-aggregate(cbind(tasmax,tasmin) ~ month, data=data, mean, na.rm=TRUE)
-monthly_tas$tas<-rowMeans(monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)
+monthly_tas$tas<-rowMeans(monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)               # mean t for given month
+# data format:
+# month | tas | tasmin | tasmax
 
-# for checking tas.where(month == 1): tasmax=31.1976 and tasmin=16.87967
+# for checking tas.where(month == 1): tasmax=31.1976 and tasmin=16.87967, tas = 24.03864
 #tas_1 <- filter(data, month==1)
 #tas_1 <- select(tas_1, month, tasmin, tasmax)
 #tas_1_mean <- aggregate(cbind(tasmax,tasmin)~month, data=tas_1, mean, na.rm=TRUE)
@@ -46,11 +52,14 @@ monthly_tas$tas<-rowMeans(monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)
 # Combine
 monthly_hist_means<-monthly_pr
 monthly_hist_means$tas<-monthly_tas$tas
+# data format:
+# month | pr | tas
 ```
 
 
-# Derive maps 
+# Derive graph 
 
+## For entire Uganda:
 ```{r}
 map_hist_mean <- 
   ggplot(data=monthly_hist_means, aes(x=month)) +
@@ -64,3 +73,41 @@ map_hist_mean <-
   theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
 plot(map_hist_mean)
 ```
+
+## For selected points
+
+Point in the northern part: lat=3.25, lon=33.25
+Point for the southern part: lat=-0.25, lon=31.25
+
+### Prepare data
+```{r}
+# Since previous aggregations didn't take lon+lat into consideration, re-do some steps here
+north_monthly<-filter(data, lat==3.25, lon==33.25)
+# data format:
+# lon | lat | year | month | pr | tasmin | tasmax
+north_monthly_pr<-aggregate(pr ~ month, north_monthly, mean, na.rm=TRUE)
+# data format:
+# month | pr 
+north_monthly_tas<-aggregate(cbind(tasmax,tasmin) ~ month, north_monthly, mean, na.rm=TRUE)
+north_monthly_tas$tas<-rowMeans(north_monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)
+# data format:
+# month | tas | tasmin | tasmax
+
+
+south_monthly<-filter(data, lat== -0.25, lon==31.25)
+south_monthly_pr<-aggregate(pr ~ month, south_monthly, mean, na.rm=TRUE)
+south_monthly_tas<-aggregate(cbind(tasmax,tasmin) ~ month, south_monthly, mean, na.rm=TRUE)
+south_monthly_tas$tas<-rowMeans(south_monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)
+```
+
+### Derive graphs for specific points
+```{r}
+# change the mtext to m of Uganda
+climateGraph(north_monthly_tas$tas,north_monthly_pr$pr,main = "      ",coltemp = "red3",colrain = "blue", argtext=list(cex=0.7), ylim=c(1,80), lwd=3, compress=FALSE, textprop=0.4)
+mtext("1029 m", col=1, at=6.5, line=1, cex=1, font=1)
+
+climateGraph(south_monthly_tas$tas,south_monthly_pr$pr,main = "      ",coltemp = "red3",colrain = "blue", argtext=list(cex=0.7), ylim=c(1,80), lwd=3, compress=FALSE, textprop=0.4)
+mtext("1318 m", col=1, at=6.5, line=1, cex=1, font=1)
+
+```
+

@@ -17,6 +17,9 @@ library(dplyr)
 The file below contains daily data for Uganda between 1979-2014. 
 ```{r}
 data <- read.csv("1979-2019_daily_Uganda.csv", header = TRUE)
+head(data)
+# data format:
+# lon | lat | year | month | date | pr | tasmin | tasmax | hurs | rsds
 ## Read the shape file
 Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
 ```
@@ -28,9 +31,13 @@ Count number of hot days/nights per month:
 # Temperature
 hot_days<-filter(data, tasmax>=35)                        #filter to hot days
 hot_days<-select(hot_days, lat, lon, year, month, tasmax) #get rid of irrelevant columns
+# data format:
+# lon | lat | year | month | tasmax
 
 hot_nights<-filter(data, tasmin>=25)
 hot_nights<-select(hot_nights, lat, lon, year, month, tasmin) 
+# data format:
+# lon | lat | year | month | tasmin
 
 # Get count of hot days across all unique lat&lon for year/month
 hot_days_count<-hot_days %>% 
@@ -39,11 +46,14 @@ hot_days_count<-hot_days %>%
 
 hot_days_count<- rename(hot_days_count, count=n)          #rename the column to "count"
 
+# and of hot nights
 hot_nights_count<-hot_nights %>% 
   group_by(lon,lat, year, month) %>% 
   summarize(n = n())
 
 hot_nights_count<- rename(hot_nights_count, count=n)          #rename the column to "count"
+# data format:
+# lon | lat | year | month | count
 ```
 
 Aggregate the data over years(sum) and then lat+lon (mean):
@@ -66,7 +76,7 @@ data$check <- ifelse(is.na(match(paste0(data$lat, data$lon),
 
 missing_coords<-filter(data, check=="No")                                 # filter to missing lat+lon
 missing_coords$count<-0                                                   # since missing, there's no hot day for them
-missing_coords<-aggregate(count~lon+lat, missing_coords, sum, na.rm=TRUE) # use aggegate to group by lat+lon easier
+missing_coords<-aggregate(count~lon+lat, missing_coords, sum, na.rm=TRUE) # use aggregate to group by lat+lon easier
 
 hot_days_count<-rbind(hot_days_count, missing_coords)                     # finally, add to *_count so it appears on the map later
 
@@ -79,6 +89,7 @@ missing_coords$count<-0
 missing_coords<-aggregate(count~lon+lat, missing_coords, sum, na.rm=TRUE)
 
 hot_nights_count<-rbind(hot_nights_count, missing_coords)
+# *_count should contain 182 obs. 
 ```
 
 # Map data
@@ -111,7 +122,7 @@ map_hot_days_hist <- ggplot() +
 
 map_hot_nights_hist <- ggplot() +
   geom_tile(data = hot_nights_count, aes(x = lon, y = lat, fill = count)) +
-  scale_fill_gradientn("Number of hot nights", values = c(0, 0.01, 0.03,0.05,0.2, 0.3, 1),  # values can twist the legend
+  scale_fill_gradientn("Number of hot nights", values = c(0, 0.1, 0.2, 0.3, 1),  # values can twist the legend
                        colours=c(brewer.pal(9,'YlOrRd')),
                        na.value = 'grey')+
   geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map

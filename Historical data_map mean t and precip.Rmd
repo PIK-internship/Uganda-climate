@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Uganda hist data t and precip maps"
 output: html_notebook
 ---
 
@@ -18,11 +18,16 @@ The file below contains monthly data for Uganda between 1979-2014.
 
 ```{r}
 data <- read.csv("1979-2019_monthly_Uganda.csv", header = TRUE)
+# head(data)
+# data format:
+# lon | lat | year | month | pr | tasmin | tasmax
+
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
 ```
 
 # Prepare data
 
-Aim: get monthly mean t and rainfall across all years. 
+Get mean t and rainfall across all years. 
 
 ```{r}
 # Precipitation
@@ -35,8 +40,6 @@ annual_tas$tas<-rowMeans(annual_tas[,c('tasmin','tasmax')], na.rm=TRUE)
 # Combine
 annual_hist_means<-annual_pr
 annual_hist_means$tas<-annual_tas$tas
-
-Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
 ```
 
 # Map data
@@ -45,14 +48,13 @@ Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as i
 ```{r}
 map_pr_hist <- ggplot() +
   geom_tile(data = annual_hist_means, aes(x = lon, y = lat, fill = pr)) +
-  scale_fill_gradientn("%",limits=c(0,170), values = c(0, 0.4,0.6, 1),  # values can twist the legend
-                       colours=c(brewer.pal(9,'BuGn')),
+  scale_fill_gradientn("Rainfall, mm", values = c(0, 0.3,0.6, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'BrBG')),
                        na.value = 'grey')+
   geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
   geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
   geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
   theme_bw()+
-  guides(fill = guide_legend(title="Rainfall, mm")) +
   theme(axis.title.x=element_blank(),
         axis.title.y=element_blank(),
         axis.text=element_text(size=10),
@@ -76,14 +78,13 @@ plot(map_pr_hist)
 ```{r}
 map_t_hist <- ggplot() +
   geom_tile(data = annual_hist_means, aes(x = lon, y = lat, fill = tas)) +
-  scale_fill_gradientn("%",limits=c(15,30), values = c(0, 0.4,0.6, 1),  # values can twist the legend
-                       colours=c(brewer.pal(9,'YlOrBr')),
+  scale_fill_gradientn("Temperature, C",limits=c(15,30), values = c(0, 0.4,0.6, 0.8, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'YlOrRd')),
                        na.value = 'grey')+
   geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
   geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
   geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
   theme_bw()+ # for canvas
-  guides(fill = guide_legend(title="Temperature, C")) +
   theme(axis.title.x=element_blank(),
         axis.title.y=element_blank(),
         axis.text=element_text(size=10),
@@ -100,5 +101,3 @@ map_t_hist <- ggplot() +
 
 plot(map_t_hist)
 ```
-
-

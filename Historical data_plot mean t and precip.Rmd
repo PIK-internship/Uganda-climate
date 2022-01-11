@@ -102,11 +102,12 @@ south_monthly_tas$tas<-rowMeans(south_monthly_tas[,c('tasmin','tasmax')], na.rm=
 
 ### Derive graphs for specific points
 ```{r}
-# change the mtext to m of Uganda
-climateGraph(north_monthly_tas$tas,north_monthly_pr$pr,main = "      ",coltemp = "red3",colrain = "blue", argtext=list(cex=0.7), ylim=c(1,80), lwd=3, compress=FALSE, textprop=0.4)
+climateGraph(north_monthly_tas$tas,north_monthly_pr$pr,main = " ",coltemp = "red3", argtext=list(cex=0.7), ylim=c(1,80), lwd=3, compress=FALSE, textprop=0.4)
+mtext("Latitude=3.25, Longtitude=33.25", col=1, at=6.5, line=3, cex=1.1, font=1)
 mtext("1029 m", col=1, at=6.5, line=1, cex=1, font=1)
 
-climateGraph(south_monthly_tas$tas,south_monthly_pr$pr,main = "      ",coltemp = "red3",colrain = "blue", argtext=list(cex=0.7), ylim=c(1,80), lwd=3, compress=FALSE, textprop=0.4)
+climateGraph(south_monthly_tas$tas,south_monthly_pr$pr,main = "  ",coltemp = "red3", argtext=list(cex=0.7), ylim=c(10,80), lwd=3, compress=FALSE, textprop=0.4)
+mtext("Latitude= -0.25, Longtitude=31.25", col=1, at=6.5, line=3, cex=1.1, font=1)
 mtext("1318 m", col=1, at=6.5, line=1, cex=1, font=1)
 
 ```

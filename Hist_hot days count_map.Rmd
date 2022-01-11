@@ -97,26 +97,25 @@ hot_nights_count<-rbind(hot_nights_count, missing_coords)
 
 ```{r}
 map_hot_days_hist <- ggplot() +
-  geom_tile(data = hot_days_count, aes(x = lon, y = lat, fill = count)) +
-  scale_fill_gradientn("Number of hot days", values = c(0, 0.03, 0.05,0.2, 0.3, 1),  # values can twist the legend
+    geom_tile(data = hot_days_count, aes(x = lon, y = lat, fill = count)) +
+  scale_fill_gradientn("Hot days", values = c(0, 0.03, 0.05,0.2, 0.3, 1),  # values can twist the legend
                        colours=c(brewer.pal(9,'YlOrRd')),
                        na.value = 'grey')+
   geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
   geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
   geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
   theme_bw()+
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank(),
-        axis.text=element_text(size=10),
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
         axis.ticks.length = unit(0.2, "cm"),
-        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans"),
-        legend.text=element_text(size=13), 
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
         legend.key.width = unit(0.35, "cm"), 
-        legend.key.height = unit(0.7, "cm"),
-        legend.margin = margin(1, 1, 1, 0),
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
         legend.position = "right")  +
-  scale_x_continuous(breaks= seq(28,35,by=2) ) +
-  scale_y_continuous(breaks= seq(-2,5,by=2) ) +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
   coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) 
 
 

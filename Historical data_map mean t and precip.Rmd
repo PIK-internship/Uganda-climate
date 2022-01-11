@@ -31,7 +31,8 @@ Get mean t and rainfall across all years.
 
 ```{r}
 # Precipitation
-annual_pr<-aggregate(pr ~ lat+lon, data=data, mean, na.rm=TRUE) # precip mean over all years per lat & lon
+annual_pr<-aggregate(pr ~ lat+lon+year, data=data, sum, na.rm=TRUE) # precip mean over all years per lat & lon
+annual_pr<-aggregate(pr ~ lat+lon, data=annual_pr, mean, na.rm=TRUE) # precip mean over all years per lat & lon
 
 # Temperature
 annual_tas<-aggregate(cbind(tasmax,tasmin) ~ lat+lon, data=data, mean, na.rm=TRUE)
@@ -46,58 +47,50 @@ annual_hist_means$tas<-annual_tas$tas
 ## Facet temp and precipitation
 
 ```{r}
-map_pr_hist <- ggplot() +
+ggplot() +
   geom_tile(data = annual_hist_means, aes(x = lon, y = lat, fill = pr)) +
-  scale_fill_gradientn("Rainfall, mm", values = c(0, 0.3,0.6, 1),  # values can twist the legend
+  scale_fill_gradientn("mm/year", values = c(0, 0.3,0.6, 1),  # values can twist the legend
                        colours=c(brewer.pal(9,'BrBG')),
                        na.value = 'grey')+
   geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
   geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
   geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
-  theme_bw()+
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank(),
-        axis.text=element_text(size=10),
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
         axis.ticks.length = unit(0.2, "cm"),
-        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans"),
-        legend.text=element_text(size=13), 
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
         legend.key.width = unit(0.35, "cm"), 
-        legend.key.height = unit(0.7, "cm"),
-        legend.margin = margin(1, 1, 1, 0),
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
         legend.position = "right")  +
-  scale_x_continuous(breaks= seq(28,35,by=2) ) +
-  scale_y_continuous(breaks= seq(-2,5,by=2) ) +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
   coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) 
-
-plot(map_pr_hist)
 ```
 
 
 
 
 ```{r}
-map_t_hist <- ggplot() +
+ggplot() +
   geom_tile(data = annual_hist_means, aes(x = lon, y = lat, fill = tas)) +
-  scale_fill_gradientn("Temperature, C",limits=c(15,30), values = c(0, 0.4,0.6, 0.8, 1),  # values can twist the legend
+  scale_fill_gradientn("°C",limits=c(15,30), values = c(0, 0.4,0.6, 0.8, 1),  # values can twist the legend
                        colours=c(brewer.pal(9,'YlOrRd')),
                        na.value = 'grey')+
   geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
   geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
   geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
-  theme_bw()+ # for canvas
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank(),
-        axis.text=element_text(size=10),
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
         axis.ticks.length = unit(0.2, "cm"),
-        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans"),
-        legend.text=element_text(size=13), 
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
         legend.key.width = unit(0.35, "cm"), 
-        legend.key.height = unit(0.7, "cm"),
-        legend.margin = margin(1, 1, 1, 0),
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
         legend.position = "right")  +
-  scale_x_continuous(breaks= seq(28,35,by=2) ) +
-  scale_y_continuous(breaks= seq(-2,5,by=2) ) +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
   coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) 
-
-plot(map_t_hist)
 ```

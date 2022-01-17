@@ -17,14 +17,12 @@ library(readr)
 
 The file below contains daily data for Uganda between 1979-2014. 
 ```{r}
+#data to be processed
 data <- read.csv("1979-2019_daily_Uganda.csv", header = TRUE)
-head(data)
-# data format:
-# lon | lat | year | month | date | pr | tasmin | tasmax | hurs | rsds
-
+# lon lat to be checked against (a must)
 points <- read_csv("points.csv", col_types = cols(...1 = col_skip()))
 
-## Read the shape file
+## the shape file
 Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
 ```
 

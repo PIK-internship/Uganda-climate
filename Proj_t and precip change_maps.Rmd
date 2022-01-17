@@ -1,0 +1,217 @@
+---
+title: "R maps for Uganda"
+output: html_notebook
+---
+
+Env setup:
+
+```{r}
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+```
+
+Load file all models monthly mean
+```{r}
+filename<-("allmodels_allscen_1971-2100_ISIMIP3_monthly.csv")
+monthly=read.csv(filename, header = TRUE)
+head(monthly)
+# data format:
+# year | month | lon | lat | pr | tasmin | tasmax | model | scen
+```
+
+Aggregate to create annual values (separate for pr and tas since once sum and once mean)
+```{r}
+annual_pr<-aggregate(pr ~ lon+lat+year+model+scen, data=monthly, sum, na.rm=TRUE)
+annual_tas<-aggregate(cbind(tasmax,tasmin) ~ lon+lat+year+model+scen, data=monthly, mean, na.rm=TRUE)
+```
+
+
+Combine to one data frame and fix naming
+```{r}
+annual<-cbind(annual_tas,annual_pr$pr)
+colnames(annual)[8]<-"pr"
+# data format:
+#  lon | lat | year |  model | scen | pr | tasmin | tasmax
+```
+
+
+Create column with tas
+```{r}
+annual$tas<-((annual$tasmax+annual$tasmin)/2)
+# data format:
+#  lon | lat | year |  model | scen | pr | tasmin | tasmax | tas
+```
+
+
+Create columns for each period of interest
+```{r}
+period_30<-annual[annual$year<=2040&annual$year>=2021,]
+period_50<-annual[annual$year<=2060&annual$year>=2041,]
+period_90<-annual[annual$year<=2100&annual$year>=2081,]
+period_hist<-annual[annual$year<=2014&annual$year>=1995,]
+```
+
+
+```{r}
+# derive mean for indicators across entire period
+period_hist<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+model+scen, data=period_hist, mean, na.rm=TRUE)
+period_30<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+model+scen, data=period_30, mean, na.rm=TRUE)
+period_50<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+model+scen, data=period_50, mean, na.rm=TRUE)
+period_90<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+model+scen, data=period_90, mean, na.rm=TRUE)
+
+# add period name to the data
+period_hist$period<-"hist"
+period_30$period<-"2030"
+period_50$period<-"2050"
+period_90$period<-"2090"
+
+# historical data will be used for both IPCC scenarios
+period_hist_ssp126<-period_hist #rename scenario to later on plot
+period_hist_ssp126$scen<-"ssp126"
+period_hist_ssp370<-period_hist
+period_hist_ssp370$scen<-"ssp370"
+```
+
+
+#add all in one data frame
+```{r}
+period<-rbind(period_hist_ssp126,period_hist_ssp370,period_30,period_50,period_90)
+```
+
+#create multi model ensemble mean 
+```{r}
+period_mean<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period, mean, na.rm=TRUE)
+period_mean$model<-"mean"
+```
+
+
+#create multi model ensemble median
+```{r}
+period_median<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period, median, na.rm=TRUE)
+period_median$model<-"median"
+```
+
+
+#create files that show difference to historical period
+```{r}
+period_hist2<-rbind(period_hist_ssp126, period_hist_ssp370)
+period_30_dif<-period_30
+period_30_dif[,c(5:8)]<-period_30[,c(5:8)]-period_hist2[,c(5:8)]
+period_50_dif<-period_50
+period_50_dif[,c(5:8)]<-period_50[,c(5:8)]-period_hist2[,c(5:8)]
+period_90_dif<-period_90
+period_90_dif[,c(5:8)]<-period_90[,c(5:8)]-period_hist2[,c(5:8)]
+
+period_dif<-rbind(period_30_dif,period_50_dif,period_90_dif)
+```
+
+
+#create multi model ensemble mean of dif
+```{r}
+period_dif_mean<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period_dif, mean, na.rm=TRUE)
+period_dif_mean$model<-"mean"
+```
+
+
+#create multi model ensemble median of dif
+```{r}
+period_dif_median<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period_dif, median, na.rm=TRUE)
+period_dif_median$model<-"median"
+
+#Uganda
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
+```
+
+
+#Maps of climate in Uganda
+##plot mean annual precipitation for multi model mean
+```{r}
+map_pr_mean <- 
+  ggplot() +
+  geom_tile(data = period_dif_mean, aes(x = lon, y = lat, fill = pr)) +
+  scale_fill_gradientn("Rainfall change, mm", values = c(0, 0.4,0.6, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'BrBG')),
+                       na.value = 'grey') +
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) +
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  theme_bw()+  xlab("Longitude (?E)") + ylab("Latitude (?N)") + 
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text=element_text(size=10), 
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans"),
+        legend.text=element_text(size=13),
+        legend.key.width = unit(0.35, "cm"), #0.6, "cm"),
+        legend.key.height = unit(0.7, "cm"), #unit(0.6, "cm"),
+        legend.margin = margin(1, 1, 1, 0),
+        # legend.spacing = unit, 
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2) ) +
+  scale_y_continuous(breaks= seq(-2,5,by=2) ) + #seq(5,15,by=5), labels = ylabs ) +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) +
+  facet_grid(scen ~ period) + #does the magic and plots different maps per defined variable
+  theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
+  theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
+plot(map_pr_mean)
+```
+
+
+```{r}
+map_pr_dif_mean <- ggplot() +
+  geom_tile(data = period_dif_mean, aes(x = lon, y = lat, fill = pr)) +
+  scale_fill_gradientn("mm",limits=c(-500,500), values = c(0, 0.4,0.6, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'BrBG')),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) +
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + 
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + 
+  theme_bw()+ 
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") + 
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) +
+  facet_grid(scen ~ period) + #does the magic and plots different maps per defined variable
+  theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
+  theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
+plot(map_pr_dif_mean)
+```
+
+```{r}
+map_tas_mean <- ggplot() +
+  geom_tile(data = period_dif_mean, aes(x = lon, y = lat, fill = tas)) +
+  scale_fill_gradientn("°C", limits=c(0, 4), values = c(0, 0.05,0.3,0.6, 0.8, 1),  # values can twist the legend
+                       colours=c('white',brewer.pal(9,'YlOrRd'), "#2e004f"),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) +
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  theme_bw()+ 
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) +
+  facet_grid(scen ~ period) + #does the magic and plots different maps per defined variable
+  theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
+  theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
+plot(map_tas_mean)
+```
+

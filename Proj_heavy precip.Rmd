@@ -1,0 +1,136 @@
+---
+title: "Uganda heavy precipitation proj"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+library(tidyr)
+library(dplyr)
+library(readr)
+```
+
+# Data read
+```{r}
+#data <- read.csv("1979-2019_daily_Uganda.csv", header = TRUE)#81[lonlat]*13879 days
+referer<- read_csv("hist_95 percentile_pr_Uganda.csv", col_types = cols(...1 = col_skip()))
+
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
+```
+# Sort relevant only
+```{r}
+pr_all <- read_csv("alls_ssp370_2014-2100_daily.csv")
+head(pr_all)
+pr_all<-filter(pr_all, pr>0.1)
+#head(pr_all)
+```
+
+
+#then you can either create maps with the percentile or with the number of days above the percentile for each time period. 
+
+## For mm/day
+
+Pass through each latlon combination and collect only those with values higher than in pr_95
+
+```{r}
+  # split and store each period as a separate file to speed up the calculations
+  pr_all<-select(pr_all, lon,lat,year,Date, pr)
+  pr_all<-divideAndRecord(pr_all)
+
+  head(pr_all)
+```
+
+Run
+```{r}
+# For each period, take quantile and find difference to hist 
+
+pr_90 <- read_csv("ssp370_pr_90.csv", col_types = cols(...1 = col_skip()))
+head(pr_90)
+pr_90<-seever(pr_90)
+pr_90<-precipChange(referer, pr_90) # make sure referer exists
+
+
+pr_30 <- read_csv("ssp370_pr_30.csv", col_types = cols(...1 = col_skip()))
+head(pr_30)
+pr_30<-seever(pr_30)
+pr_30<-precipChange(referer, pr_30) # make sure referer exists
+
+pr_50 <- read_csv("ssp370_pr_50.csv", col_types = cols(...1 = col_skip()))
+head(pr_30)
+pr_50<-seever(pr_50)
+pr_50<-precipChange(referer, pr_50) # make sure referer exists
+
+## Read previous files that were removed for memory concerns
+#pr_30 <- read_csv("ssp370_pr_30_95_diff.csv", col_types = cols(...1 = col_skip()))
+#pr_50 <- read_csv("ssp370_pr_50_95_diff.csv", col_types = cols(...1 = col_skip()))
+#pr_90 <- read_csv("ssp370_pr_90_95_diff.csv", col_types = cols(...1 = col_skip()))
+
+pr_370<-rbind(pr_30, pr_50, pr_90)
+write.csv(pr_370, "pr_ssp370_heavy precipitation.csv")
+```
+
+For the other scenario
+```{r}
+# For each period, take quantile and find difference to hist 
+pr_30 <- read_csv("pr_30.csv", col_types = cols(...1 = col_skip()))
+head(pr_30)
+pr_30<-seever(pr_30)
+pr_30<-precipChange(referer, pr_30) # make sure referer exists
+
+pr_50 <- read_csv("pr_50.csv", col_types = cols(...1 = col_skip()))
+head(pr_50)
+pr_50<-seever(pr_50)
+pr_50<-precipChange(referer, pr_50) # make sure referer exists
+
+pr_90 <- read_csv("pr_90.csv", col_types = cols(...1 = col_skip()))
+head(pr_90)
+pr_90<-seever(pr_90)
+pr_90<-precipChange(referer, pr_90) # make sure referer exists
+
+## Read previous files that were removed for memory concerns
+#pr_30 <- read_csv("ssp126_pr_30_95_diff.csv", col_types = cols(...1 = col_skip()))
+#pr_50 <- read_csv("ssp126_pr_50_95_diff.csv", col_types = cols(...1 = col_skip()))
+#pr_90 <- read_csv("ssp126_pr_90_95_diff.csv", col_types = cols(...1 = col_skip()))
+
+pr_126<-rbind(pr_30, pr_50, pr_90)
+write.csv(pr_126, "pr_ssp126_heavy precipitation.csv")
+```
+
+Combine both files
+```{r}
+pr_heavy_all_periods<-rbind(pr_126, pr_370)
+write.csv(pr_heavy_all_periods, "proj_heavy precipitation_Uganda.csv")
+```
+
+
+
+# Map the values
+
+```{r}
+ggplot() +
+  geom_tile(data = pr_heavy_all_periods, aes(x = lon, y = lat, fill = diff)) +
+  scale_fill_gradientn("mm", values = c(0, 0.2, 0.3, 0.4, 0.6, 0.8, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'BuPu')),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) +
+  facet_grid(scen ~ period)
+```
+
+

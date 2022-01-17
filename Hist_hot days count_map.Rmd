@@ -1,0 +1,146 @@
+---
+title: "Map with observed hot days"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+library(tidyr)
+library(dplyr)
+```
+
+# Import data
+
+The file below contains daily data for Uganda between 1979-2014. 
+```{r}
+data <- read.csv("1979-2019_daily_Uganda.csv", header = TRUE)
+head(data)
+# data format:
+# lon | lat | year | month | date | pr | tasmin | tasmax | hurs | rsds
+## Read the shape file
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
+```
+
+# Prepare data
+
+Count number of hot days/nights per month:
+```{r}
+# Temperature
+hot_days<-filter(data, tasmax>=35)                        #filter to hot days
+hot_days<-select(hot_days, lat, lon, year, month, tasmax) #get rid of irrelevant columns
+# data format:
+# lon | lat | year | month | tasmax
+
+hot_nights<-filter(data, tasmin>=25)
+hot_nights<-select(hot_nights, lat, lon, year, month, tasmin) 
+# data format:
+# lon | lat | year | month | tasmin
+
+# Get count of hot days across all unique lat&lon for year/month
+hot_days_count<-hot_days %>% 
+  group_by(lon,lat, year, month) %>% 
+  summarize(n = n())
+
+hot_days_count<- rename(hot_days_count, count=n)          #rename the column to "count"
+
+# and of hot nights
+hot_nights_count<-hot_nights %>% 
+  group_by(lon,lat, year, month) %>% 
+  summarize(n = n())
+
+hot_nights_count<- rename(hot_nights_count, count=n)          #rename the column to "count"
+# data format:
+# lon | lat | year | month | count
+```
+
+Aggregate the data over years(sum) and then lat+lon (mean):
+```{r}
+# Get mean hot days yearly and across years
+hot_days_count<-aggregate(count ~ lon+lat+year, hot_days_count, sum, na.RM=TRUE)  # sums for each year
+hot_days_count<-aggregate(count ~ lon+lat, hot_days_count, mean, na.RM=TRUE)      # mean across years
+hot_days_count$count<-as.integer(unlist(hot_days_count$count))                    # convert double to int
+
+hot_nights_count<-aggregate(count ~ lon+lat+year, hot_nights_count, sum, na.RM=TRUE)
+hot_nights_count<-aggregate(count ~ lon+lat, hot_nights_count, mean, na.RM=TRUE)
+hot_nights_count$count<-as.integer(unlist(hot_nights_count$count))
+```
+
+# Artificially add missing coords
+```{r}
+# first for hot days
+data$check <- ifelse(is.na(match(paste0(data$lat, data$lon),  
+                                        paste0(hot_days_count$lat, hot_days_count$lon))),"No", "Yes")  # checks if lat+lon combination exists in *_count df
+
+missing_coords<-filter(data, check=="No")                                 # filter to missing lat+lon
+missing_coords$count<-0                                                   # since missing, there's no hot day for them
+missing_coords<-aggregate(count~lon+lat, missing_coords, sum, na.rm=TRUE) # use aggregate to group by lat+lon easier
+
+hot_days_count<-rbind(hot_days_count, missing_coords)                     # finally, add to *_count so it appears on the map later
+
+# then for hot nights
+data$check <- ifelse(is.na(match(paste0(data$lat, data$lon), 
+                                        paste0(hot_nights_count$lat, hot_nights_count$lon))),"No", "Yes")
+
+missing_coords<-filter(data, check=="No")
+missing_coords$count<-0
+missing_coords<-aggregate(count~lon+lat, missing_coords, sum, na.rm=TRUE)
+
+hot_nights_count<-rbind(hot_nights_count, missing_coords)
+# *_count should contain 182 obs. 
+```
+
+# Map data
+## Facet temp and precipitation
+
+```{r}
+map_hot_days_hist <- ggplot() +
+    geom_tile(data = hot_days_count, aes(x = lon, y = lat, fill = count)) +
+  scale_fill_gradientn("Hot days", values = c(0, 0.03, 0.05,0.2, 0.3, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'YlOrRd')),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
+  theme_bw()+
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) 
+
+
+map_hot_nights_hist <- ggplot() +
+  geom_tile(data = hot_nights_count, aes(x = lon, y = lat, fill = count)) +
+  scale_fill_gradientn("Number of hot nights", values = c(0, 0.1, 0.2, 0.3, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'YlOrRd')),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
+  theme_bw()+
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text=element_text(size=10),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans"),
+        legend.text=element_text(size=13), 
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.7, "cm"),
+        legend.margin = margin(1, 1, 1, 0),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2) ) +
+  scale_y_continuous(breaks= seq(-2,5,by=2) ) +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) 
+
+plot(map_hot_days_hist) + plot(map_hot_nights_hist)
+```

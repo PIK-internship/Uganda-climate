@@ -1,0 +1,72 @@
+---
+title: "Hit hot days and nights helpers"
+output: html_notebook
+---
+
+```{r}
+hot_days<-function(source) {
+  data_hot_days<-filter(source, tasmax>=35) #change back to source
+  data_hot_days<-select(data_hot_days, lat, lon, year, month, tasmax) #get rid of irrelevant columns
+  # count hot days per lat+lon+year+month
+  data_hot_days<-hot_units(data_hot_days)
+  return(data_hot_days)
+}
+
+hot_nights<-function(source) {
+  data_hot_nights<-filter(source, tasmin>=25) 
+  data_hot_nights<-select(data_hot_nights, lat, lon, year, month, tasmin)
+  # count hot nights per lat+lon+year+month
+  data_hot_nights<-hot_units(data_hot_nights)  
+  return(data_hot_nights)
+}
+
+hot_units<-function(source){
+  data_hot_units<-source %>% 
+                  group_by(lon,lat, year, month) %>% 
+                  summarize(n = n())
+
+  data_hot_units<- rename(data_hot_units, count=n)          #rename the column to "count"
+  
+  
+  data_hot_units<-aggregate(count ~ lon+lat+year, data_hot_units, sum, na.RM=TRUE)  # sums for each year
+  data_hot_units<-aggregate(count ~ lon+lat, data_hot_units, mean, na.RM=TRUE)      # mean across years
+  data_hot_units$count<-as.integer(unlist(data_hot_units$count))                    # convert double to int
+
+  # complete with missing coords
+  data_hot_units<-completion(points, data_hot_units)
+
+  return(data_hot_units)
+}
+
+# points: points with yes,no of hits
+missing<-function(points) {
+  missing_points <- filter(points, check=="No") 
+  missing_points<-select(missing_points, lat, lon)
+  missing_points$count<-0
+  return(missing_points)
+}
+
+# source: points, target: scenario with data
+checker<-function(source, target) {
+  source$check <- ifelse(is.na(match(paste0(source$lat, source$lon),  
+                                  paste0(target$lat, target$lon))),"No", "Yes")
+  return(source)
+}
+
+# source: points, target: data for that period
+completion<-function(source, target) { 
+  source<-checker(source, target)
+  if(ifelse(grepl("No", source$check), "y", "n")=="y") {
+     missing_coords<-missing(source)
+     target<-rbind(target, missing_coords)    
+  }
+  return(target)
+}
+
+# run this if points.csv missing
+pointsGenesis<-function(data) {
+  points<-data %>% group_by(lon,lat)  %>%   summarize(n = n())
+  points<- select(points, lat, lon)
+  return(points)
+}
+```

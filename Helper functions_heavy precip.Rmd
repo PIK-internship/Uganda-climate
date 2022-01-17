@@ -1,0 +1,68 @@
+---
+title: "Helper functions for heavy precipitation"
+output: html_notebook
+---
+
+```{r}
+# returns only rows with precip higher than in historical threshold --> can be dropped
+# reference: hist, target: data to be filtered
+seever2<-function(reference, target) {
+  combined<- data.frame(matrix(ncol = 9, nrow = 0))
+  for(i in reference$lonlat) {
+    ref_val<-filter(reference, lonlat==i) 
+    filtered<-filter(target, lonlat==i, pr>=ref_val$pr)
+    combined<-rbind(combined, filtered)
+  }
+  write.csv(combined, "ssp126_pr_90_seeved.csv")
+  return(combined)
+}
+
+# record difference to historic values
+# reference: historic, target: projected
+precipChange<-function(reference, target) {
+  combined<- data.frame(matrix(ncol = 9, nrow = 0))
+  for(i in reference$lonlat) {
+    ref_val<-filter(reference, lonlat==i) 
+    filtered<-filter(target, lonlat==i)
+    filtered$diff<-filtered$pr-ref_val$pr
+    combined<-rbind(combined, filtered)
+  }
+  combined$scen<-"ssp126" #change scenario
+  write.csv(combined, "ssp126_pr_90_seeved_diff.csv")
+  return(combined)
+}
+
+# divides into periods and records them
+divideAndRecord<-function(source) {
+  
+  data_30<-filter(source, year<2050)
+  data_50<-filter(source, year>=2050 & year<2090)
+  data_90<-filter(source, year>=2090)
+  
+  data_30$period<-"2030"
+  data_50$period<-"2050"
+  data_90$period<-"2090"
+  
+  write.csv(data_30, "ssp126_pr_30.csv")
+  write.csv(data_50, "ssp126_pr_50.csv")
+  write.csv(data_90, "ssp126_pr_90.csv")
+  
+  data<-rbind(data_30, data_50, data_90)
+  
+  return(data)
+}
+
+seever<-function(source) {
+  pr_95<-aggregate(pr~lon+lat+period, source, FUN = 'quantile', probs=c(95)/100) # add period
+  pr_95$lonlat<-paste(pr_95$lon,pr_95$lat)
+  write.csv(pr_95, "ssp126_pr_90_95.csv") # adjust title
+  
+  source$lonlat<-paste(source$lon,source$lat)
+  data<-seever2(pr_95, source)
+  
+  data<-aggregate(pr~lon+lat+period+lonlat, data, mean, na.rm=TRUE)
+  write.csv(data, "ssp126_pr_90_seeved_means.csv")
+  return(data)
+}
+```
+

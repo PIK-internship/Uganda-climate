@@ -1,0 +1,43 @@
+---
+title: "Uganda droughts"
+output: html_notebook
+---
+
+
+
+```{r}
+library(SPEI)
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+library(tidyr)
+library(dplyr)
+```
+
+
+
+```{r}
+#load daily data
+ISIMIP_daily_ll<-read.csv("1979-2019_daily_Uganda.csv", header =TRUE)
+
+#monthly mean
+pr_month<-aggregate(pr ~ month+year, data=ISIMIP_daily_ll, sum, na.rm=TRUE)
+tas_month<-aggregate(cbind(tasmax,tasmin) ~ month+year+lon+lat, data=ISIMIP_daily_ll, mean, na.rm=TRUE)
+ISIMIP_monthly_ll<-cbind(tas_month,pr_month$pr) 
+colnames(ISIMIP_monthly_ll)<-c("month","year","lon","lat","tasmin","tasmax","pr")
+
+ISIMIP_monthly_ll$tasmean <- (ISIMIP_monthly_ll$tasmax+ISIMIP_monthly_ll$tasmin)/2 
+
+ISIMIP_monthly_ll$PET <- thornthwaite(ISIMIP_monthly_ll$tasmean, ISIMIP_daily_ll$lat[k]) #calculate potential evapotranspiration
+ISIMIP_monthly_ll$BAL <- ISIMIP_monthly_ll$pr-ISIMIP_monthly_ll$PET #calculate balance
+ISIMIP_monthly_ll_ts <- ts(ISIMIP_monthly_ll[,-c(1,2,3,4)], start=c(1981,1), frequency=12) #make time series for SPEI
+
+spei1 <- spei(ISIMIP_monthly_ll_ts[,'BAL'], 1) #calculate SPEI for one month
+df_spei1<-as.data.frame(spei1$fitted)
+
+spei12 <- spei(ISIMIP_monthly_ll_ts[,'BAL'], 12) #calculate SPEI for one month
+df_spei12<-as.data.frame(spei12$fitted)
+```
+
+

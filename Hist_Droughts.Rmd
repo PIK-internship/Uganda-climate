@@ -10,7 +10,8 @@ library(SPEI)
 library(ggplot2) #for mapping with ggplot
 library(scales)  #for colour scales
 library(RColorBrewer) #for colour scales
-library(rgdal) #reading shape files
+library(zoo)
+library(tidyverse)
 library(tidyr)
 library(dplyr)
 ```
@@ -60,8 +61,6 @@ droughts<-function(source) {
 To map
 
 ```{r}
-library(zoo)
-library(tidyverse)
 DF <- zoo::fortify.zoo(df_spei12)
 DF <- DF %>% 
   dplyr::select(-Index) %>% 

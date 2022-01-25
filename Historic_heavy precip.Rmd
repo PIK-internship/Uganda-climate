@@ -1,0 +1,90 @@
+---
+title: "Uganda heavy precipitation hist"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+library(tidyr)
+library(dplyr)
+```
+
+# Data read
+```{r}
+data <- read.csv("1979-2019_daily_Uganda.csv", header = TRUE)#81[lonlat]*13879 days
+head(data)
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
+```
+# Sort relevant only
+```{r}
+data$lonlat<-paste(data$lon,data$lat) 
+pr<-data[,c(1:6, 11)]
+```
+
+
+#frequency of extreme event
+```{r}
+pr_rain<-subset(pr,pr>0.1)#select rows with pr>0.1, take percentiles only of wet days!
+
+pr_95<-aggregate(pr ~ lon+lat+lonlat, data = pr_rain, FUN = 'quantile', probs=c(95)/100) #select 95th percentile rain
+```
+
+#then you can either create maps with the percentile or with the number of days above the percentile for each time period. 
+
+## For mm/day
+```{r}
+checker<-function(source, target) {
+  combined<- data.frame(matrix(ncol = 7, nrow = 0))
+  for(i in source$lonlat) {
+    source_val<-filter(source, lonlat==i) 
+    filtered<-filter(target, lonlat==i, pr>=source_val$pr)
+    combined<-rbind(heavy_precip, filtered)
+  }
+  return(combined)
+}
+```
+
+
+Pass through each latlon combination and collect only those with values higher than in pr_95
+```{r}
+# find all days with heavy precip
+heavy_precip<-checker(pr_95, pr_rain)
+
+# aggregate to means
+heavy_precip_means<-aggregate(pr~lon+lat+Date, heavy_precip, mean, na.rm=TRUE)
+heavy_precip_means<-aggregate(pr~lon+lat, heavy_precip_means, mean, na.rm=TRUE)
+```
+
+# Map the values
+
+```{r}
+ggplot() +
+  geom_tile(data = heavy_precip_means, aes(x = lon, y = lat, fill = pr)) +
+  scale_fill_gradientn("mm/day", values = c(0, 0.3,0.6, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'BuPu')),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) 
+```
+Save file for further use
+```{r}
+write.csv(heavy_precip, "hist_heavy precip days_Uganda.csv")
+write.csv(pr_95, "hist_95 percentile_pr_Uganda.csv")
+```
+

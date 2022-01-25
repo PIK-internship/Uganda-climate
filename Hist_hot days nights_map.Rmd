@@ -1,5 +1,5 @@
 ---
-title: "Map with observed hot days"
+title: "Historic annual mean hot days/nights"
 output: html_notebook
 ---
 
@@ -13,23 +13,28 @@ library(dplyr)
 library(readr)
 ```
 
-# Import data
+# 1. Load data
 
 The file below contains daily data for Uganda between 1979-2014. 
 ```{r}
-#data to be processed
 data <- read.csv("1979-2019_daily_Uganda.csv", header = TRUE)
 # lon lat to be checked against (a must)
 points <- read_csv("points.csv", col_types = cols(...1 = col_skip()))
 
 ## the shape file
-Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) 
 ```
 
-# Prepare data
+# 2. Prepare data
 
 For below to work, make sure `Helper functions_hot days nights_hist.Rmd` was run and `points.csv` either loaded or generated using **pointsGenesis** function.
 
+Approach: 
+- find daily hot units (days/nights)
+- aggregate/count them by lon+lat+year+month (summarize)
+- aggregate by ...+month (sum)
+- aggregate by ...+year (mean)
+- add missing lon+lat coordinates
 ```{r}
 hot_days<-hot_days(data)
 hot_nights<-hot_nights(data)

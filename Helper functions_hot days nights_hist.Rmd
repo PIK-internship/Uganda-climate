@@ -1,29 +1,68 @@
 ---
-title: "Hit hot days and nights helpers"
+title: "Hot hot days and nights helpers"
 output: html_notebook
 ---
 
+This file contains helper functions for `Hist_hot days nights_map.Rmd` file. Once run, their docstrings can be accessed using `?<function>`. 
+
 ```{r}
+library(docstring)
+
 hot_days<-function(source) {
-  data_hot_days<-filter(source, tasmax>=35) #change back to source
+  #' Hot days
+  #' 
+  #' Filters hot days (tasmax>=35 degrees Celsius) out of provided data and counts them. 
+  #' Day counts are aggregated per lon, lat, year, and month.
+  #' 
+  #' @param source file with data to be processed
+  #' @return count of hot days
+  
+  
+  data_hot_days<-filter(source, tasmax>=35) 
   data_hot_days<-select(data_hot_days, lat, lon, year, month, tasmax) #get rid of irrelevant columns
-  # count hot days per lat+lon+year+month
-  data_hot_days<-hot_units(data_hot_days)
+  
+  data_hot_days<-hot_units(data_hot_days) # count hot days per lat+lon+year+month
+  
   return(data_hot_days)
 }
+docstring(hot_days)
+```
 
+```{r}
 hot_nights<-function(source) {
+  #' Hot nights
+  #' 
+  #' Filters hot nights (tasmin>=25 degrees Celsius) out of provided data and counts them. 
+  #' Night counts are aggregated per lon, lat, year, and month.
+  #' 
+  #' @param source file with data to be processed
+  #' @return count of hot nights
+  
   data_hot_nights<-filter(source, tasmin>=25) 
   data_hot_nights<-select(data_hot_nights, lat, lon, year, month, tasmin)
-  # count hot nights per lat+lon+year+month
-  data_hot_nights<-hot_units(data_hot_nights)  
+
+  data_hot_nights<-hot_units(data_hot_nights)   # count hot nights per lat+lon+year+month
+  
   return(data_hot_nights)
 }
+docstring(hot_nights)
+```
 
+```{r}
 hot_units<-function(source){
+  #' Hot units
+  #' 
+  #' Core function called by `hot days` and `hot nights`. 
+  #' Performs the grouping per lon, lat, year, month to count units. 
+  #' Data is further aggregated (sum) against lon+lat+year and again lon+lat (mean). 
+  #' In order to help mapping the data, the missing lon+lat values are added.
+  #' 
+  #' @param source file with data to be processed
+  #' @return count of hot units across unique lon+lat combinations
+  
   data_hot_units<-source %>% 
                   group_by(lon,lat, year, month) %>% 
-                  summarize(n = n())
+                  summarize(n = n())                        #count units of concern
 
   data_hot_units<- rename(data_hot_units, count=n)          #rename the column to "count"
   
@@ -32,41 +71,79 @@ hot_units<-function(source){
   data_hot_units<-aggregate(count ~ lon+lat, data_hot_units, mean, na.RM=TRUE)      # mean across years
   data_hot_units$count<-as.integer(unlist(data_hot_units$count))                    # convert double to int
 
-  # complete with missing coords
-  data_hot_units<-completion(points, data_hot_units)
+  data_hot_units<-completion(points, data_hot_units)        # complete with missing coords
 
   return(data_hot_units)
 }
+docstring(hot_units)
+```
 
-# points: points with yes,no of hits
-missing<-function(points) {
-  missing_points <- filter(points, check=="No") 
-  missing_points<-select(missing_points, lat, lon)
-  missing_points$count<-0
-  return(missing_points)
-}
-
-# source: points, target: scenario with data
-checker<-function(source, target) {
-  source$check <- ifelse(is.na(match(paste0(source$lat, source$lon),  
-                                  paste0(target$lat, target$lon))),"No", "Yes")
-  return(source)
-}
-
+```{r}
 # source: points, target: data for that period
 completion<-function(source, target) { 
-  source<-checker(source, target)
-  if(ifelse(grepl("No", source$check), "y", "n")=="y") {
+  #' Completion
+  #' 
+  #' Since not every lon+lat may experience hot days/nights, the missing coordinates need to be added. 
+  #' Using `checker`, this function loops over unique lon+lat values and records them if missing. 
+  #' 
+  #' @param source list of distinct Uganda lon+lat coordinates
+  #' @param target data with hot units 
+  #' @return complete list of lon+lat and their count of hot units
+  
+  source<-checker(source, target)                         # checks which lon+lat are missing
+  
+  if(ifelse(grepl("No", source$check), "y", "n")=="y") {  # if at least one is missing, record it
      missing_coords<-missing(source)
      target<-rbind(target, missing_coords)    
   }
   return(target)
 }
+docstring(completion)
+```
 
+```{r}
+# points: points with yes,no of hits
+missing<-function(points) {
+  #' Missing
+  #' 
+  #' Filters lon+lat values with "No" under `points$check` column and set count of hot units to zero.
+  #' 
+  #' @param source list of checked Uganda lon+lat coordinates (ie points.csv)
+  #' @return list of missing Uganda coordinates with zeros under `*$count` column.
+  
+  missing_points <- filter(points, check=="No") 
+  missing_points<-select(missing_points, lat, lon)
+  missing_points$count<-0
+  return(missing_points)
+}
+docstring(missing)
+```
+
+```{r}
+checker<-function(source, target) {
+  #' Checker
+  #' 
+  #' Checks target data for presence of each distinct lon+lat combinations.
+  #' 
+  #' @param source list of distinct Uganda lon+lat coordinates (ie points.csv)
+  #' @param target data with lon+lat of hot units 
+  #' @return list of distinct Uganda coordinates with yes/no indication of their presence.
+  
+  source$check <- ifelse(is.na(match(paste0(source$lat, source$lon),  
+                                  paste0(target$lat, target$lon))),"No", "Yes")
+  return(source)
+}
+docstring(checker)
+```
+
+
+Call this function only if `points.csv` is missing
+```{r}
 # run this if points.csv missing
 pointsGenesis<-function(data) {
   points<-data %>% group_by(lon,lat)  %>%   summarize(n = n())
   points<- select(points, lat, lon)
   return(points)
 }
+docstring()
 ```

@@ -36,8 +36,8 @@ Approach:
 - aggregate by ...+year (mean)
 - add missing lon+lat coordinates
 ```{r}
-hot_days<-hot_days(data)
-hot_nights<-hot_nights(data)
+hot_days<-hot_days(data, FALSE)
+hot_nights<-hot_nights(data, FALSE)
 ```
 
 

@@ -48,18 +48,18 @@ For the sake of memory management, each period should be run separately, clearin
 ```{r}
 pr_90 <- read_csv("ssp370_pr_90.csv", col_types = cols(...1 = col_skip()))
 # Note: adapt the function strings
-pr_90<-seever(pr_90)
+pr_90<-heavyPrecip(pr_90)
 pr_90<-precipChange(referer, pr_90) # make sure referer exists
 
 
 pr_30 <- read_csv("ssp370_pr_30.csv", col_types = cols(...1 = col_skip()))
 # Note: adapt the function strings
-pr_30<-seever(pr_30)
+pr_30<-heavyPrecip(pr_30)
 pr_30<-precipChange(referer, pr_30) 
 
 pr_50 <- read_csv("ssp370_pr_50.csv", col_types = cols(...1 = col_skip()))
 # Note: adapt the function strings
-pr_50<-seever(pr_50)
+pr_50<-heavyPrecip(pr_50)
 pr_50<-precipChange(referer, pr_50) 
 
 ## Read previous files that were removed for memory concerns
@@ -92,17 +92,17 @@ Proceed with data preparation
 # For each period, take quantile and find difference to hist 
 pr_30 <- read_csv("ssp126_pr_30.csv", col_types = cols(...1 = col_skip()))
 # Note: adapt the function strings
-pr_30<-seever(pr_30)
+pr_30<-heavyPrecip(pr_30)
 pr_30<-precipChange(referer, pr_30) # make sure referer exists
 
 pr_50 <- read_csv("ssp126_pr_50.csv", col_types = cols(...1 = col_skip()))
 # Note: adapt the function strings
-pr_50<-seever(pr_50)
+pr_50<-heavyPrecip(pr_50)
 pr_50<-precipChange(referer, pr_50) # make sure referer exists
 
 pr_90 <- read_csv("ssp126_pr_90.csv", col_types = cols(...1 = col_skip()))
 # Note: adapt the function strings
-pr_90<-seever(pr_90)
+pr_90<-heavyPrecip(pr_90)
 pr_90<-precipChange(referer, pr_90) # make sure referer exists
 
 ## Read previous files that were removed for memory concerns

@@ -3,7 +3,7 @@ title: "Proj hot days and nights"
 output: html_notebook
 ---
 
-The current notebook should be run together with `Helper functions_hot days nights_proj.Rmd`.
+The current notebook should be run together with `Helper functions_hot days nights.Rmd`.
 
 ```{r}
 library(ggplot2) #for mapping with ggplot
@@ -15,81 +15,82 @@ library(dplyr)
 ```
 
 # 1. Load data
-If all relevant csvs available, skip to Mapping. Below are instructions for first run.
-
 ```{r}
-data_ssp370 <- read.csv("alls_ssp370_2014-2100_daily.csv", header = TRUE)
-data_ssp370_t<-select(data_ssp370, lat, lon, year, month, tasmax, tasmin, scen, model) #get rid of irrelevant columns
-
 # for first run we need the lat+lon points
 # either import the csv or generate it using the line below
+points<- read_csv("points.csv", col_types = cols(...1 = col_skip()))
 #points<-pointsGenesis(data_ssp370_t)
 #write.csv(points, "points.csv")
 
 ## Read the shape file
 Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) 
-
 ```
 
-Due to heavy file sizes, load the second dataset later
+If all relevant csvs available, skip to Mapping. Below are instructions for first run.
+## First run for ssp370 
+```{r}
+data_ssp370 <- read.csv("alls_ssp370_2014-2100_daily.csv", header = TRUE)
+data_ssp370_t<-select(data_ssp370, lat, lon, year, month, tasmax, tasmin, scen, model) #get rid of irrelevant columns
+```
+
+# 2. Prepare data
+
+Count number of hot days/nights and record scenario.
+Approach: 
+- find daily hot units (days>=35/nights?=25)
+- aggregate/count them by lon+lat+year+month (summarize)
+- aggregate by ...+year (sum)
+- aggregate by lon+lat (mean) per period, recording it
+- add missing lon+lat coordinates
+
+```{r}
+# Hot Days
+data_ssp370_hot_days<-hot_days(data_ssp370_t, TRUE)
+data_ssp370_hot_days$scen<-"ssp370"
+
+# Hot Nights
+data_ssp370_hot_nights<-hot_nights(data_ssp370_t, TRUE)
+data_ssp370_hot_nights$scen<-"ssp370"
+```
+
+
+## Now for ssp126
+Load data
 ```{r}
 data_ssp126 <- read.csv("alls_ssp126_2014-2100_daily.csv", header = TRUE)
 data_ssp126_t<-select(data_ssp126, lat, lon, year, month, tasmax, tasmin, scen, model) #get rid of irrelevant columns
 ```
-
-# Prepare data
-
-Read points.csv (excl first column) before proceeding
-
-Count number of hot days and nights:
-```{r}
-# Hot Days
-data_ssp370_hot_days<-hot_days(data_ssp370_t)
-data_ssp370_hot_days$scen<-"ssp370"
-
-
-# Hot Nights
-data_ssp370_hot_nights<-hot_nights(data_ssp370_t)
-data_ssp370_hot_nights$scen<-"ssp370"
-
-```
-
-Now for second scenario:
+Prepare it
 ```{r}
 # Get count of hot days across all unique lat&lon for year/month
-data_ssp126_hot_days<-hot_days(data_ssp126_t)
+data_ssp126_hot_days<-hot_days(data_ssp126_t, TRUE)
 data_ssp126_hot_days$scen<-"ssp126"
 
-
-data_ssp126_hot_nights<-hot_nights(data_ssp126_t)
+data_ssp126_hot_nights<-hot_nights(data_ssp126_t, TRUE)
 data_ssp126_hot_nights$scen<-"ssp126"
-
 ```
 
-To save all relevant files:
+To save all relevant files, if needed
 ```{r}
-#write.csv(data_ssp370_hot_days,"proj_hot_days_ssp370_Uganda.csv")
-#write.csv(data_ssp370_hot_nights,"proj_hot_nights_ssp370_Uganda.csv")
-#write.csv(data_ssp126_hot_days,"proj_hot_days_ssp126_Uganda.csv")
-#write.csv(data_ssp126_hot_nights,"proj_hot_nights_ssp126_Uganda.csv")
-#write.csv(data_hot_days,"proj_hot_days_all_Uganda.csv")
-#write.csv(data_hot_nights,"proj_hot_nights_all_Uganda.csv")
+#write.csv(data_ssp370_hot_days,"proj_hot_days_ssp370.csv")
+#write.csv(data_ssp370_hot_nights,"proj_hot_nights_ssp370.csv")
+
+#write.csv(data_ssp126_hot_days,"proj_hot_days_ssp126.csv")
+#write.csv(data_ssp126_hot_nights,"proj_hot_nights_ssp126.csv")
 ```
 
-Combine hot days and nights:
-
+# 3. Merge files
+Combine hot days and nights for both scenarios
 ```{r}
 data_hot_days<-rbind(data_ssp370_hot_days, data_ssp126_hot_days)
 data_hot_nights<-rbind(data_ssp370_hot_nights, data_ssp126_hot_nights)
 
-
-# if imported
-#data_hot_days<-rbind(proj_hot_days_ssp370_Uganda, proj_hot_days_ssp126_Uganda)
-#data_hot_nights<-rbind(proj_hot_nights_ssp370_Uganda, data_ssp126_hot_nights)
+#write.csv(data_hot_days,"proj_hot_days_all.csv")
+#write.csv(data_hot_nights,"proj_hot_nights_all.csv")
 ```
 
 
-# Map data
+# 4. Map data
 
 Hot days
 ```{r}

@@ -4,6 +4,8 @@ author: "Albina Muzafarova"
 output: html_notebook
 ---
 
+Current notebook refers to functions held in `Helper functions_monthly annual means.Rmd` file.
+
 ```{r}
 library(ggplot2) #for mapping with ggplot
 library(scales)  #for colour scales
@@ -23,7 +25,7 @@ data <- read.csv("1979-2019_monthly_Uganda.csv", header = TRUE)
 # data format:
 # lon | lat | year | month | pr | tasmin | tasmax
 
-Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) 
 ```
 
 # Prepare data
@@ -31,17 +33,7 @@ Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as i
 Get mean t and rainfall across all years. 
 
 ```{r}
-# Precipitation
-annual_pr<-aggregate(pr ~ lat+lon+year, data=data, sum, na.rm=TRUE) # precip mean over all years per lat & lon
-annual_pr<-aggregate(pr ~ lat+lon, data=annual_pr, mean, na.rm=TRUE) # precip mean over all years per lat & lon
-
-# Temperature
-annual_tas<-aggregate(cbind(tasmax,tasmin) ~ lat+lon, data=data, mean, na.rm=TRUE)
-annual_tas$tas<-rowMeans(annual_tas[,c('tasmin','tasmax')], na.rm=TRUE)
-
-# Combine
-annual_hist_means<-annual_pr
-annual_hist_means$tas<-annual_tas$tas
+annual<-annualMeans(data)
 ```
 
 # Map data
@@ -49,7 +41,7 @@ annual_hist_means$tas<-annual_tas$tas
 
 ```{r}
 ggplot() +
-  geom_tile(data = annual_hist_means, aes(x = lon, y = lat, fill = pr)) +
+  geom_tile(data = annual, aes(x = lon, y = lat, fill = pr)) +
   scale_fill_gradientn("mm/year", values = c(0, 0.3,0.6, 1),  # values can twist the legend
                        colours=c(brewer.pal(9,'BrBG')),
                        na.value = 'grey')+
@@ -75,7 +67,7 @@ ggplot() +
 
 ```{r}
 ggplot() +
-  geom_tile(data = annual_hist_means, aes(x = lon, y = lat, fill = tas)) +
+  geom_tile(data = annual, aes(x = lon, y = lat, fill = tas)) +
   scale_fill_gradientn("°C",limits=c(15,30), values = c(0, 0.4,0.6, 0.8, 1),  # values can twist the legend
                        colours=c(brewer.pal(9,'YlOrRd')),
                        na.value = 'grey')+

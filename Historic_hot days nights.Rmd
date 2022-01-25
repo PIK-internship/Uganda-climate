@@ -4,6 +4,8 @@ author: "Albina Muzafarova"
 output: html_notebook
 ---
 
+Current notebook should be used together with `Helper functions_hot days nights.Rmd`
+
 ```{r}
 library(ggplot2) #for mapping with ggplot
 library(scales)  #for colour scales

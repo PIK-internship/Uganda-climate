@@ -4,7 +4,7 @@ author: "Albina Muzafarova"
 output: html_notebook
 ---
 
-This file containst helper function for `Proj_heavy precip.Rmd`. 
+This file contains helper function for `Proj_heavy precip.Rmd`. 
 Strings need to be adjust before every run! 
 After first run, available in the help pages of RStudio. 
 ```{r}

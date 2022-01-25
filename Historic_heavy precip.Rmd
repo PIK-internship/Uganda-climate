@@ -4,6 +4,8 @@ author: "Albina Muzafarova"
 output: html_notebook
 ---
 
+This notebook contains functions held in `Helper functions_heavy precip_hist.Rmd`
+
 ```{r}
 library(ggplot2) #for mapping with ggplot
 library(scales)  #for colour scales

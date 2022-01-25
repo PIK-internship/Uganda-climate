@@ -4,6 +4,7 @@ author: "Albina Muzafarova"
 output: html_notebook
 ---
 
+Current notebook should be used together with `Helper functions_monthly annual means.Rmd`
 
 ```{r}
 library(ggplot2) 

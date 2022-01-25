@@ -4,7 +4,7 @@ author: "Albina Muzafarova"
 output: html_notebook
 ---
 
-Helpers for both historic and projected drought visualizations. 
+Helpers for both historic (`Hist_droughts.Rmd`) and projected (`Proj_droughts.Rmd`) drought visualizations. 
 
 ```{r}
 library(docstring)

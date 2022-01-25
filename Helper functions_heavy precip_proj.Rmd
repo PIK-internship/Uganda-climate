@@ -1,5 +1,6 @@
 ---
 title: "Helper functions for projected heavy precipitation"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

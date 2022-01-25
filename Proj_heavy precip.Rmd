@@ -1,5 +1,6 @@
 ---
 title: "Uganda heavy precipitation proj"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 
@@ -154,5 +155,4 @@ ggplot() +
   coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) +
   facet_grid(scen ~ period)
 ```
-
 

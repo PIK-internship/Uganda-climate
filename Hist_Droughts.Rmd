@@ -1,5 +1,6 @@
 ---
 title: "Uganda droughts (hist)"
+author: "Paula Aschenbrenner/Albina Muzafarova"
 output: html_notebook
 ---
 

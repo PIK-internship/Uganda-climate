@@ -1,5 +1,6 @@
 ---
 title: "Historic annual mean hot days/nights"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

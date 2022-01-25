@@ -1,7 +1,7 @@
 ---
 title: "Projected MMEM temperature and precipation"
 output: html_notebook
-author: Paula Aschenbrenner
+author: "Paula Aschenbrenner"
 ---
 
 Env setup:

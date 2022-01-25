@@ -1,5 +1,6 @@
 ---
 title: "Drought helpers"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Uganda historic mean t and precip graphs"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Uganda hist data t and precip maps"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

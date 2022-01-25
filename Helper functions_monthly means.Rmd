@@ -1,5 +1,6 @@
 ---
 title: "Helper functions for historic monthly means"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

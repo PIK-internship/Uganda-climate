@@ -1,5 +1,6 @@
 ---
 title: "Uganda heavy precipitation hist"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Helpers for historic heavy precip"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: "Uganda droughts (proj)"
-output: html_notebook
+author: "Albina Muzafarova"
+output: github_document
 ---
 
 Current notebook should be used together with `Helper functions_droughts.Rmd`

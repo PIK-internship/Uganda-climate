@@ -1,5 +1,6 @@
 ---
 title: "Proj hot days and nights"
+author: "Albina Muzafarova"
 output: html_notebook
 ---
 

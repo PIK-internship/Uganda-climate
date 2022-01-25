@@ -1,10 +1,10 @@
 ---
-title: "R maps for Uganda"
+title: "Projected MMEM temperature and precipation"
 output: html_notebook
+author: "Paula Aschenbrenner"
 ---
 
 Env setup:
-
 ```{r}
 library(ggplot2) #for mapping with ggplot
 library(scales)  #for colour scales
@@ -12,7 +12,8 @@ library(RColorBrewer) #for colour scales
 library(rgdal) #reading shape files
 ```
 
-Load file all models monthly mean
+# 1. Load data
+
 ```{r}
 filename<-("allmodels_allscen_1971-2100_ISIMIP3_monthly.csv")
 monthly=read.csv(filename, header = TRUE)
@@ -21,12 +22,12 @@ head(monthly)
 # year | month | lon | lat | pr | tasmin | tasmax | model | scen
 ```
 
+# 2. Prepare data
 Aggregate to create annual values (separate for pr and tas since once sum and once mean)
 ```{r}
 annual_pr<-aggregate(pr ~ lon+lat+year+model+scen, data=monthly, sum, na.rm=TRUE)
 annual_tas<-aggregate(cbind(tasmax,tasmin) ~ lon+lat+year+model+scen, data=monthly, mean, na.rm=TRUE)
 ```
-
 
 Combine to one data frame and fix naming
 ```{r}
@@ -36,14 +37,12 @@ colnames(annual)[8]<-"pr"
 #  lon | lat | year |  model | scen | pr | tasmin | tasmax
 ```
 
-
 Create column with tas
 ```{r}
 annual$tas<-((annual$tasmax+annual$tasmin)/2)
 # data format:
 #  lon | lat | year |  model | scen | pr | tasmin | tasmax | tas
 ```
-
 
 Create columns for each period of interest
 ```{r}
@@ -52,7 +51,6 @@ period_50<-annual[annual$year<=2060&annual$year>=2041,]
 period_90<-annual[annual$year<=2100&annual$year>=2081,]
 period_hist<-annual[annual$year<=2014&annual$year>=1995,]
 ```
-
 
 ```{r}
 # derive mean for indicators across entire period
@@ -74,27 +72,25 @@ period_hist_ssp370<-period_hist
 period_hist_ssp370$scen<-"ssp370"
 ```
 
-
-#add all in one data frame
+Add all in one data frame
 ```{r}
 period<-rbind(period_hist_ssp126,period_hist_ssp370,period_30,period_50,period_90)
 ```
 
-#create multi model ensemble mean 
+Create multi model ensemble mean 
 ```{r}
 period_mean<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period, mean, na.rm=TRUE)
 period_mean$model<-"mean"
 ```
 
 
-#create multi model ensemble median
+Create multi model ensemble median
 ```{r}
 period_median<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period, median, na.rm=TRUE)
 period_median$model<-"median"
 ```
 
-
-#create files that show difference to historical period
+Create files that show difference to historical period
 ```{r}
 period_hist2<-rbind(period_hist_ssp126, period_hist_ssp370)
 period_30_dif<-period_30
@@ -107,25 +103,23 @@ period_90_dif[,c(5:8)]<-period_90[,c(5:8)]-period_hist2[,c(5:8)]
 period_dif<-rbind(period_30_dif,period_50_dif,period_90_dif)
 ```
 
-
-#create multi model ensemble mean of dif
+Create multi model ensemble mean of dif
 ```{r}
 period_dif_mean<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period_dif, mean, na.rm=TRUE)
 period_dif_mean$model<-"mean"
 ```
 
-
-#create multi model ensemble median of dif
+Create multi model ensemble median of dif
 ```{r}
 period_dif_median<-aggregate(cbind(pr,tasmax,tasmin,tas) ~ lat+lon+scen+period, data=period_dif, median, na.rm=TRUE)
 period_dif_median$model<-"median"
 
 #Uganda
-Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) # preferred as it is being processed better by ggplot
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) 
 ```
 
 
-#Maps of climate in Uganda
+# 3. Maps of climate in Uganda
 ##plot mean annual precipitation for multi model mean
 ```{r}
 map_pr_mean <- 

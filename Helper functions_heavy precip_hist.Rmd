@@ -1,0 +1,54 @@
+---
+title: "Helpers for historic heavy precip"
+author: "Albina Muzafarova"
+output: html_notebook
+---
+
+Helper functions for `Historic_heavy precip.Rmd`. Once added, function description can be called using `?<function>` in the console. 
+
+```{r}
+library(docstring)
+heavyPrecip<-function(source) {
+  #' Heavy precipitation
+  #' 
+  #' Extracts heavy precipitation data for each lon+lat combination. 
+  #' Data is aggregated per lon+lat+Date (mean) and then only lon+lat (mean).
+  #' 
+  #' @param source file with wet days (pr>0.1)
+  #' @return extreme heavy rain data
+  pr_95<-aggregate(pr~lon+lat+lonlat, source, FUN = 'quantile', probs=c(95)/100) #select 95th percentile rain
+
+   # find all days with heavy precip
+  res<-checker(pr_95, source)
+  
+  # aggregate to means
+  res<-aggregate(pr~lon+lat+Date, res, mean, na.rm=TRUE)
+  res<-aggregate(pr~lon+lat, res, mean, na.rm=TRUE) 
+  
+  return(res)
+}
+docstring(heavyPrecip)
+```
+
+```{r}
+extremeChecker<-function(source, target) {
+  #' Extreme checker
+  #' 
+  #' Filters out data with extreme rains, aggregated by 
+  #' 
+  #' @param source file with .95 percentile reference
+  #' @param target wet days dataset
+  #' @return data with extreme events only
+  
+  combined<- data.frame(matrix(ncol = length(source), nrow = 0))
+  
+  for(i in source$lonlat) {
+    source_val<-filter(source, lonlat==i)                 #get reference value
+    filtered<-filter(target, lonlat==i, pr>=source_val$pr)#get all higher than reference
+    combined<-rbind(combined, filtered)
+  }
+  return(combined)
+}
+
+docstring(checker)
+```

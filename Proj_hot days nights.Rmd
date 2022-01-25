@@ -1,0 +1,151 @@
+---
+title: "Proj hot days and nights"
+author: "Albina Muzafarova"
+output: html_notebook
+---
+
+The current notebook should be run together with `Helper functions_hot days nights.Rmd`.
+
+```{r}
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+library(tidyr)
+library(dplyr)
+```
+
+# 1. Load data
+```{r}
+# for first run we need the lat+lon points
+# either import the csv or generate it using the line below
+points<- read_csv("points.csv", col_types = cols(...1 = col_skip()))
+#points<-pointsGenesis(data_ssp370_t)
+#write.csv(points, "points.csv")
+
+## Read the shape file
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE) 
+```
+
+If all relevant csvs available, skip to Mapping. Below are instructions for first run.
+## First run for ssp370 
+```{r}
+data_ssp370 <- read.csv("alls_ssp370_2014-2100_daily.csv", header = TRUE)
+data_ssp370_t<-select(data_ssp370, lat, lon, year, month, tasmax, tasmin, scen, model) #get rid of irrelevant columns
+```
+
+# 2. Prepare data
+
+Count number of hot days/nights and record scenario.
+Approach: 
+- find daily hot units (days>=35/nights?=25)
+- aggregate/count them by lon+lat+year+month (summarize)
+- aggregate by ...+year (sum)
+- aggregate by lon+lat (mean) per period, recording it
+- add missing lon+lat coordinates
+
+```{r}
+# Hot Days
+data_ssp370_hot_days<-hot_days(data_ssp370_t, TRUE)
+data_ssp370_hot_days$scen<-"ssp370"
+
+# Hot Nights
+data_ssp370_hot_nights<-hot_nights(data_ssp370_t, TRUE)
+data_ssp370_hot_nights$scen<-"ssp370"
+```
+
+
+## Now for ssp126
+Load data
+```{r}
+data_ssp126 <- read.csv("alls_ssp126_2014-2100_daily.csv", header = TRUE)
+data_ssp126_t<-select(data_ssp126, lat, lon, year, month, tasmax, tasmin, scen, model) #get rid of irrelevant columns
+```
+Prepare it
+```{r}
+# Get count of hot days across all unique lat&lon for year/month
+data_ssp126_hot_days<-hot_days(data_ssp126_t, TRUE)
+data_ssp126_hot_days$scen<-"ssp126"
+
+data_ssp126_hot_nights<-hot_nights(data_ssp126_t, TRUE)
+data_ssp126_hot_nights$scen<-"ssp126"
+```
+
+To save all relevant files, if needed
+```{r}
+#write.csv(data_ssp370_hot_days,"proj_hot_days_ssp370.csv")
+#write.csv(data_ssp370_hot_nights,"proj_hot_nights_ssp370.csv")
+
+#write.csv(data_ssp126_hot_days,"proj_hot_days_ssp126.csv")
+#write.csv(data_ssp126_hot_nights,"proj_hot_nights_ssp126.csv")
+```
+
+# 3. Merge files
+Combine hot days and nights for both scenarios
+```{r}
+data_hot_days<-rbind(data_ssp370_hot_days, data_ssp126_hot_days)
+data_hot_nights<-rbind(data_ssp370_hot_nights, data_ssp126_hot_nights)
+
+#write.csv(data_hot_days,"proj_hot_days_all.csv")
+#write.csv(data_hot_nights,"proj_hot_nights_all.csv")
+```
+
+
+# 4. Map data
+
+Hot days
+```{r}
+ggplot() +
+geom_tile(data = data_hot_days, aes(x = lon, y = lat, fill = count)) +
+  scale_fill_gradientn("Hot days/year", values = c(0, 0.003, 0.05,0.3,0.6, 0.8, 0.9, 1),  # values can twist the legend
+                       colours=c('white',brewer.pal(9,'YlOrRd'), "#2e004f"),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) +
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  theme_bw()+ 
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) +
+  facet_grid(scen ~ period) + #does the magic and plots different maps per defined variable
+  theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
+  theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
+```
+
+Hot nights
+```{r}
+ggplot() +
+geom_tile(data = data_hot_nights, aes(x = lon, y = lat, fill = count)) +
+  scale_fill_gradientn("Hot nights/year", values = c(0, 0.0002, 0.005, 0.03, 0.07, 0.1, 0.4, 0.6, 0.8, 1),  # values can twist the legend
+                       colours=c('white',brewer.pal(9,'YlOrRd'), "#2e004f"),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) +
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + #, width=unit(0.35, "cm")) +
+  theme_bw()+ 
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) +
+  facet_grid(scen ~ period) + #does the magic and plots different maps per defined variable
+  theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
+  theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
+```
+

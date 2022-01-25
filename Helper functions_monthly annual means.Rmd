@@ -1,0 +1,63 @@
+---
+title: "Helper functions for historic monthly and annual means"
+author: "Albina Muzafarova"
+output: html_notebook
+---
+
+This notebook contains functions repeatedly used in `Historic_monthly means.Rmd` and `Historic_annual means.Rmd`. 
+
+```{r}
+library(docstring)
+
+monthlyMeans<-function(source) {
+  #' Monthly means
+  #' 
+  #' Derives monthly precipitation and temperature means for provided dataset. Both variables are aggregated 
+  #' per month (no consideration of lon+lat). Furthermore, tas are averaged by (tasmax+tasmin)/2. 
+  #' 
+  #' @param source file with monthly precipitation and temperature data
+  #' @return file with precipitation and temperature data aggregated by months
+  
+  # Precipitation
+  monthly_means<-aggregate(pr ~ month, source, mean, na.rm=TRUE)
+
+  # Temperature
+  monthly_tas<-aggregate(cbind(tasmax,tasmin) ~ month, source, mean, na.rm=TRUE)
+  monthly_tas$tas<-rowMeans(monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)
+  
+  # Combine
+  monthly_means$tas<-monthly_tas$tas
+  # data format:
+  # month | pr | tas
+  
+  return(monthly_means)
+}
+
+docstring(monthlyMeans)
+```
+```{r}
+annualMeans<-function(source) {
+  #' Annual means
+  #' 
+  #' Derives annual precipitation and temperature means for provided dataset. Both variables are aggregated 
+  #' per lon+lat (mean), although precipitation is first summed by lat+lon+year. Furthermore, tas are averaged by (tasmax+tasmin)/2. 
+  #' 
+  #' @param source file with monthly precipitation and temperature data
+  #' @return file with precipitation and temperature data aggregated by lon+lat over all years
+  
+  # Precipitation
+  annual_pr<-aggregate(pr ~ lat+lon+year, source, sum, na.rm=TRUE) # precip mean over all years per lat & lon
+  annual_pr<-aggregate(pr ~ lat+lon, data=annual_pr, mean, na.rm=TRUE) # precip mean over all years per lat & lon
+  
+  # Temperature
+  annual_tas<-aggregate(cbind(tasmax,tasmin) ~ lat+lon, source, mean, na.rm=TRUE)
+  annual_tas$tas<-rowMeans(annual_tas[,c('tasmin','tasmax')], na.rm=TRUE)
+  
+  # Combine
+  annual_hist_means<-annual_pr
+  annual_hist_means$tas<-annual_tas$tas
+  
+  return(annual_hist_means)
+}
+docstring(annualMeans)
+```

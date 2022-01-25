@@ -1,0 +1,86 @@
+---
+title: "Uganda droughts (proj)"
+author: "Albina Muzafarova"
+output: github_document
+---
+
+Current notebook should be used together with `Helper functions_droughts.Rmd`
+
+```{r}
+library(SPEI)
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(zoo)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+```
+
+
+
+```{r}
+#load daily data
+daily_all370<-read.csv("alls_ssp370_2014-2100_daily.csv", header =TRUE)
+head(daily_all370)
+```
+
+Approach:
+- simplify data to have just mean temperature and precipitation values
+- means are derived by aggregating against lon+lat+year+month+Date
+- additionally, data is aggregated against month+year for precip (sum) and temperature (mean)
+
+```{r}
+#degress the models
+monthly370<-simplify(daily_all370)
+
+# calc spei
+petBal370<- petBalance(monthly370)
+spei12_370<-droughts(petBal370)
+df_spei12_370<-as.data.frame(spei12_370$fitted)
+df_spei12_370<- rename(df_spei12_370, fitted=`Series 1`)
+df_370<-graphPrep(df_spei12_370)
+
+#write.csv(DF, "proj_370_spei_plotted_droughts.csv")
+```
+
+Repeat for ssp126
+```{r}
+#### for 126
+#load daily data
+daily_all_126<-read.csv("alls_ssp126_2014-2100_daily.csv", header =TRUE)
+head(daily_all_126)
+
+monthly126<-simplify(daily_all_126)
+petBal126<-petBalance(monthly126)
+spei12_126<-droughts(petBal126)
+df_spei12_126<-as.data.frame(spei12_126$fitted)
+df_spei12_126<- rename(df_spei12_126, fitted=`Series 1`)
+
+#write.csv(df_spei12_126, "proj_126_spei_droughts.csv")
+df_126<-graphPrep(monthly, df_spei12_126)
+#write.csv(df, "proj_126_spei_plotted_droughts.csv")
+```
+
+
+# Map data
+First scenario
+```{r}
+ggplot2::ggplot(df_370) +
+  geom_bar(aes(x = Period, y = fitted, col = sign, fill = sign),
+            show.legend = F, stat = "identity") +
+  scale_color_manual(values = c("pos" = "darkblue", "neg" = "red")) +
+  scale_fill_manual(values = c("pos"  = "darkblue", "neg" = "red")) +
+  ylab("SPEI") + ggtitle("12-Month SPEI with ssp370") +
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+```
+Second scenario
+```{r}
+ggplot2::ggplot(df_126) +
+  geom_bar(aes(x = Period, y = fitted, col = sign, fill = sign),
+            show.legend = F, stat = "identity") +
+  scale_color_manual(values = c("pos" = "darkblue", "neg" = "red")) +
+  scale_fill_manual(values = c("pos"  = "darkblue", "neg" = "red")) +
+  ylab("SPEI") + ggtitle("12-Month SPEI with ssp126") +
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+```

@@ -1,0 +1,234 @@
+---
+title: "Hot hot days and nights helpers"
+author: "Albina Muzafarova"
+output: html_notebook
+---
+
+This file contains helper functions for `Hist_hot days nights.Rmd` and `Proj_hot days nights.Rmd` file. Once run, their docstrings can be accessed using `?<function>`. 
+
+```{r}
+library(docstring)
+
+hot_days<-function(source, projected) {
+  #' Hot days
+  #' 
+  #' Filters hot days (tasmax>=35 degrees Celsius) out of provided data and counts them. 
+  #' Day counts are aggregated per lon, lat, year, and month.
+  #' 
+  #' @param source file with data to be processed
+  #' @param projected boolean true if projections are passed
+  #' @return count of hot days
+  
+  
+  data_hot_days<-filter(source, tasmax>=35) 
+  data_hot_days<-select(data_hot_days, lat, lon, year, month, tasmax) #get rid of irrelevant columns
+  
+  if(projected) {
+    data_hot_days<- hot_units_proj(data_hot_days) # count hot days per lat+lon+year+month
+  } else {
+    data_hot_days<- hot_units(data_hot_days) # count hot days per lat+lon+year+month
+  }
+  
+  return(data_hot_days)
+}
+docstring(hot_days)
+```
+
+```{r}
+hot_nights<-function(source, projected) {
+  #' Hot nights
+  #' 
+  #' Filters hot nights (tasmin>=25 degrees Celsius) out of provided data and counts them. 
+  #' Night counts are aggregated per lon, lat, year, and month.
+  #' 
+  #' @param source file with data to be processed
+  #' @param projected boolean true, if projections are passed
+  #' @return count of hot nights
+  
+  data_hot_nights<-filter(source, tasmin>=25) 
+  data_hot_nights<-select(data_hot_nights, lat, lon, year, month, tasmin)
+
+  if(projected) {
+      data_hot_nights<-hot_units_proj(data_hot_nights)   # count hot nights per lat+lon+year+month
+  } else {
+      data_hot_nights<-hot_units(data_hot_nights)   # count hot nights per lat+lon+year+month
+  }
+  
+  return(data_hot_nights)
+}
+docstring(hot_nights)
+```
+
+Called for projections only:
+
+```{r}
+hot_units_proj<-function(source){
+  #' Hot units (projections)
+  #' 
+  #' Core function called by `hot days` and `hot nights`. 
+  #' Performs the grouping per lon, lat, year, month and model to count units. 
+  #' Data is further aggregated:
+  #' - against lon+lat+year+month (mean)
+  #' - against lon+lat+year (sum)
+  #' - against lon+lat (mean). 
+  #' the last aggregation is performed per period (30, 50, 90), recording it. 
+  #' In order to help mapping the data, the missing lon+lat values are added.
+  #' 
+  #' @param source file with data to be processed
+  #' @return count of hot units across unique lon+lat+period combinations
+  
+  data_hot_units<-source %>% 
+                  group_by(lon,lat, year, month, model) %>% 
+                  summarize(n = n())
+
+  data_hot_units<- rename(data_hot_units, count=n)          #rename the column to "count"
+  
+  # take monthly mean across models
+  data_hot_units<-aggregate(count ~ lon+lat+year+month, data_hot_units, mean, na.rm=TRUE)
+  data_hot_units$count<-as.integer(unlist(data_hot_units$count))     
+  # take yearly sum as we want hot days/year
+  data_hot_units<-aggregate(count ~ lon+lat+year, data_hot_units, sum, na.rm=TRUE)
+  data_hot_units$count<-as.integer(unlist(data_hot_units$count)) 
+  
+  # divide into periods and conquer
+  data_hot_units_30<-filter(data_hot_units, year<2050)
+  data_hot_units_50<-filter(data_hot_units, year>=2050 & year<2090) 
+  data_hot_units_90<-filter(data_hot_units, year>=2090)
+  
+  # take yearly means
+  data_hot_units_30<-aggregate(count ~ lon+lat, data_hot_units_30, mean, na.RM=TRUE) 
+  data_hot_units_30$count<-as.integer(unlist(data_hot_units_30$count))                    
+  
+  data_hot_units_50<-aggregate(count ~ lon+lat, data_hot_units_50, mean, na.RM=TRUE)
+  data_hot_units_50$count<-as.integer(unlist(data_hot_units_50$count))
+  
+  data_hot_units_90<-aggregate(count ~ lon+lat, data_hot_units_90, mean, na.RM=TRUE)
+  data_hot_units_90$count<-as.integer(unlist(data_hot_units_90$count))                   
+  
+  # record period
+  data_hot_units_30$period<-"2030"
+  data_hot_units_50$period<-"2050"
+  data_hot_units_90$period<-"2090"
+  
+  # complete with missing coords
+  data_hot_units_30<-completion(points, data_hot_units_30, TRUE)
+  data_hot_units_50<-completion(points, data_hot_units_50, TRUE)
+  data_hot_units_90<-completion(points, data_hot_units_90, TRUE)
+  
+  data_hot_units<-rbind(data_hot_units_30, data_hot_units_50, data_hot_units_90)
+  
+  return(data_hot_units)
+}
+docstring(hot_units_proj)
+```
+
+Called for historic values:
+```{r}
+hot_units<-function(source){
+  #' Hot units
+  #' 
+  #' Core function called by `hot days` and `hot nights`. 
+  #' Performs the grouping per lon, lat, year, month to count units. 
+  #' Data is further aggregated (sum) against lon+lat+year and again lon+lat (mean). 
+  #' In order to help mapping the data, the missing lon+lat values are added.
+  #' 
+  #' @param source file with data to be processed
+  #' @return count of hot units across unique lon+lat combinations
+  
+  data_hot_units<-source %>% 
+                  group_by(lon,lat, year, month) %>% 
+                  summarize(n = n())                        #count units of concern
+
+  data_hot_units<- rename(data_hot_units, count=n)          #rename the column to "count"
+  
+  
+  data_hot_units<-aggregate(count ~ lon+lat+year, data_hot_units, sum, na.RM=TRUE)  # sums for each year
+  data_hot_units<-aggregate(count ~ lon+lat, data_hot_units, mean, na.RM=TRUE)      # mean across years
+  data_hot_units$count<-as.integer(unlist(data_hot_units$count))                    # convert double to int
+
+  data_hot_units<-completion(points, data_hot_units, FALSE)        # complete with missing coords
+
+  return(data_hot_units)
+}
+docstring(hot_units)
+```
+
+```{r}
+# source: points, target: data for that period
+completion<-function(source, target, projected) { 
+  #' Completion
+  #' 
+  #' Since not every lon+lat may experience hot days/nights, the missing coordinates need to be added. 
+  #' Using `checker`, this function loops over unique lon+lat values and records them if missing. 
+  #' 
+  #' @param source list of distinct Uganda lon+lat coordinates
+  #' @param target data with hot units 
+  #' @param projected boolean true if projected data is passed
+  #' @return complete list of lon+lat and their count of hot units
+  
+  source<-checker(source, target)                         # checks which lon+lat are missing
+  
+  if(ifelse(grepl("No", source$check), "y", "n")=="y") {  # if at least one is missing, record it
+     missing_coords<-missing(source)
+     if(projected) {
+        missing_coords$period<-target$period[2] # otherwise split and add into the units part
+     }
+     target<-rbind(target, missing_coords)    
+  }
+  return(target)
+}
+docstring(completion)
+```
+
+```{r}
+# points: points with yes,no of hits
+missing<-function(points) {
+  #' Missing
+  #' 
+  #' Filters lon+lat values with "No" under `points$check` column and set count of hot units to zero.
+  #' 
+  #' @param source list of checked Uganda lon+lat coordinates (ie points.csv)
+  #' @return list of missing Uganda coordinates with zeros under `*$count` column.
+  
+  missing_points <- filter(points, check=="No") 
+  missing_points<-select(missing_points, lat, lon)
+  missing_points$count<-0
+  return(missing_points)
+}
+docstring(missing)
+```
+
+```{r}
+checker<-function(source, target) {
+  #' Checker
+  #' 
+  #' Checks target data for presence of each distinct lon+lat combinations.
+  #' 
+  #' @param source list of distinct Uganda lon+lat coordinates (ie points.csv)
+  #' @param target data with lon+lat of hot units 
+  #' @return list of distinct Uganda coordinates with yes/no indication of their presence.
+  
+  source$check <- ifelse(is.na(match(paste0(source$lat, source$lon),  
+                                  paste0(target$lat, target$lon))),"No", "Yes")
+  return(source)
+}
+docstring(checker)
+```
+
+
+Call this function only if `points.csv` is missing
+```{r}
+pointsGenesis<-function(data) {
+  #' Points Genesis
+  #' 
+  #' Generates a list of unique lon+lat combinations for Uganda.
+  #' 
+  #' @param data file with complete monthly/daily values
+  #' @return distinct lon+lat values
+  
+  points<-data %>% group_by(lon,lat)  %>%   summarize(n = n())
+  points<- select(points, lat, lon)
+  return(points)
+}
+docstring(pointsGenesis)
+```

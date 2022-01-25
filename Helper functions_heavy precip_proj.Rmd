@@ -1,0 +1,116 @@
+---
+title: "Helper functions for projected heavy precipitation"
+author: "Albina Muzafarova"
+output: html_notebook
+---
+
+This file contains helper function for `Proj_heavy precip.Rmd`. 
+Strings need to be adjust before every run! 
+After first run, available in the help pages of RStudio. 
+```{r}
+library(docstring)
+heavyPrecip<-function(source) {
+  #' Heavy precipitation
+  #' 
+  #' Filters out heavy precipitation data for given period. First quantile is calculated. 
+  #' Then for each lonlat, heavy rains (>=.95) are filtered using `seever`. 
+  #' Lastly, data is aggregated by lon+lat+period+lonlat (mean).
+  #' 
+  #' @param source file with wet days (pr>0.1)
+  #' @return data with extreme rains for that period
+  
+  pr_95<-aggregate(pr~lon+lat+period, source, FUN = 'quantile', probs=c(95)/100) 
+  pr_95$lonlat<-paste(pr_95$lon,pr_95$lat)
+  write.csv(pr_95, "ssp126_pr_90_95.csv") 
+  
+  source$lonlat<-paste(source$lon,source$lat)
+  data<-seever(pr_95, source)
+  
+  data<-aggregate(pr~lon+lat+period+lonlat, data, mean, na.rm=TRUE)
+  write.csv(data, "ssp126_pr_90_seeved_means.csv")
+  return(data)
+}
+docstring(heavyPrecip)
+```
+
+
+```{r}
+seever<-function(reference, target) {
+  #' Seever
+  #' 
+  #' Core function utilized by `heavyPrecip` to derive heavy precipitation values for each lon+lat. 
+  #' 
+  #' @param reference file with .95 percentile for given period
+  #' @param target dataset with wet days
+  #' @return heavy rains for each lon+lat for given period
+   
+  combined<- data.frame(matrix(ncol = length(target), nrow = 0))
+  for(i in reference$lonlat) {
+    ref_val<-filter(reference, lonlat==i) 
+    filtered<-filter(target, lonlat==i, pr>=ref_val$pr)
+    combined<-rbind(combined, filtered)
+  }
+  write.csv(combined, "ssp126_pr_90_seeved.csv")
+  return(combined)
+}
+docstring(seever)
+```
+
+```{r}
+precipChange<-function(reference, target) {
+  #' Precipitation change
+  #' 
+  #' Calculates the difference between precipitation values for given period and historic values, 
+  #' stored in `*$diff` column.
+  #' 
+  #' @param reference file with .95 percentile of historic values
+  #' @param target dataset with extreme days for given period
+  #' @return difference in precipitation of given period to historic one.
+  
+  combined<- data.frame(matrix(ncol = length(target), nrow = 0))
+  
+  for(i in reference$lonlat) {
+    ref_val<-filter(reference, lonlat==i) 
+    filtered<-filter(target, lonlat==i)
+    filtered$diff<-filtered$pr-ref_val$pr
+    combined<-rbind(combined, filtered)
+  }
+  
+  combined$scen<-"ssp126" #change scenario
+  write.csv(combined, "ssp126_pr_90_seeved_diff.csv")
+  return(combined)
+}
+docstring(precipChange)
+```
+
+```{r}
+# divides into periods and records them
+divideAndRecord<-function(source) {
+  #' Divide and record
+  #' 
+  #' Splits data into 3 periods (_30, _50, _90), saves them in different files, recroding the period.
+  #' 
+  #' @param source complete dataset with wet days
+  #' @return same dataset with `*$period` column added
+  
+  data_30<-filter(source, year<2050)
+  data_50<-filter(source, year>=2050 & year<2090)
+  data_90<-filter(source, year>=2090)
+  
+  data_30$period<-"2030"
+  data_50$period<-"2050"
+  data_90$period<-"2090"
+  
+  write.csv(data_30, "ssp126_pr_30.csv")
+  write.csv(data_50, "ssp126_pr_50.csv")
+  write.csv(data_90, "ssp126_pr_90.csv")
+  
+  data<-rbind(data_30, data_50, data_90)
+  
+  return(data)
+}
+docstring(divideAndRecord)
+```
+
+
+

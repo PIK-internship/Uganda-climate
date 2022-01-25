@@ -1,0 +1,77 @@
+---
+title: "Uganda heavy precipitation hist"
+author: "Albina Muzafarova"
+output: html_notebook
+---
+
+This notebook contains functions held in `Helper functions_heavy precip_hist.Rmd`
+
+```{r}
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(rgdal) #reading shape files
+library(tidyr)
+library(dplyr)
+```
+
+# 1. Load data
+
+The file contains historic daily data between 1979-2019. 
+```{r}
+data <- read.csv("1979-2019_daily_Uganda.csv", header = TRUE)#81[lonlat]*13879 days
+
+Uganda<-readOGR('./shp/UGA_adm1.shp', stringsAsFactors = FALSE)
+```
+
+# 2. Prepare data
+
+Approach:
+- filter datapoints with wet days
+- get 0.95 of all wet days (extreme events) for each lon+lat combination for further reference
+- filter days with precipitation > 0.95
+- get the average precipitation a day per lon+lat
+- get the average precipitation per lon+lat
+
+```{r}
+data$lonlat<-paste(data$lon,data$lat) # for easier comparison operations
+
+pr<-data[,c(1:6, 11)] # filter relevant columns
+
+pr_rain<-subset(pr,pr>0.1) #select rows with pr>0.1, i.e wet days
+
+heavy_precip<-heavyPrecip(pr_rain)
+```
+
+Save file for further use
+```{r}
+write.csv(heavy_precip, "hist_heavy precip_Uganda.csv")
+write.csv(pr_95, "hist_95_pr_Uganda.csv")
+```
+
+# 3. Map data
+
+```{r}
+ggplot() +
+  geom_tile(data = heavy_precip, aes(x = lon, y = lat, fill = pr)) +
+  scale_fill_gradientn("mm/day", values = c(0, 0.3,0.6, 1),  # values can twist the legend
+                       colours=c(brewer.pal(9,'BuPu')),
+                       na.value = 'grey')+
+  geom_polygon(data=Uganda, aes(x = long, y=lat, group=group), fill = NA, col="black", size = 0.9) + # for the country map
+  geom_hline(yintercept=seq(-2,5,by=2), linetype="dashed", color = "black") + # for y-axis
+  geom_vline(xintercept=seq(28,35,by=2), linetype="dashed", color = "black") + # for x-axis
+  theme(axis.text=element_text(family="DejaVu Sans", size = rel(1.2)),
+        axis.title.x=element_text(margin=margin(t=0.4, unit="cm"), size=13,family="DejaVu Sans"),
+        axis.title.y=element_text(margin=margin(r=0.4, unit="cm"), size=13, family="DejaVu Sans"),
+        axis.ticks.length = unit(0.2, "cm"),
+        legend.title =element_text(size = 13, face = 'bold', family="DejaVu Sans", margin=margin(b=0.4, unit="cm")),
+        legend.key.width = unit(0.35, "cm"), 
+        legend.key.height = unit(0.8, "cm"),
+        legend.text = element_text(family="DejaVu Sans", size = rel(1.2)),
+        legend.position = "right")  +
+  scale_x_continuous(breaks= seq(28,35,by=2), name= "Longitude (E)") +
+  scale_y_continuous(breaks= seq(-2,5,by=2), name="Latitude (N)") +
+  coord_map(xlim = c(29.5,35), ylim = c(-1.5,4.5)) 
+```
+
+

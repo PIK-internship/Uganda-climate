@@ -13,14 +13,20 @@ hot_days<-function(source) {
   data_hot_days<-hot_units(data_hot_days)
   return(data_hot_days)
 }
+docstring()
+```
 
+```{r}
 hot_nights<-function(source) {
   data_hot_nights<-filter(source, tasmin>=25) 
   # count hot nights per lat+lon+year+month
   data_hot_nights<-hot_units(data_hot_nights)  
   return(data_hot_nights)
 }
+docstring()
+```
 
+```{r}
 hot_units<-function(source){
   data_hot_units<-source %>% 
                   group_by(lon,lat, year, month, model) %>% # could summarize per year here already
@@ -62,7 +68,10 @@ hot_units<-function(source){
   data_hot_units<-rbind(data_hot_units_30, data_hot_units_50, data_hot_units_90)
   return(data_hot_units)
 }
+docstring()
+```
 
+```{r}
 # points: points with yes,no of hits
 missing<-function(points) {
   missing_points <- filter(points, check=="No") 
@@ -70,14 +79,20 @@ missing<-function(points) {
   missing_points$count<-0
   return(missing_points)
 }
+docstring()
+```
 
+```{r}
 # source: points, target: scenario with data
 checker<-function(source, target) {
   source$check <- ifelse(is.na(match(paste0(source$lat, source$lon),  
                                   paste0(target$lat, target$lon))),"No", "Yes")
   return(source)
 }
+docstring()
+```
 
+```{r}
 # source: points, target: data for that period
 completion<-function(source, target) { 
   source<-checker(source, target)
@@ -88,7 +103,10 @@ completion<-function(source, target) {
   }
   return(target)
 }
+docstring()
+```
 
+```{r}
 pointsGenesis<-function(data) {
   points<-data %>% group_by(lon,lat)  %>%   summarize(n = n())
   points<- select(points, lat, lon)

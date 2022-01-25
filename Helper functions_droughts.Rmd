@@ -1,0 +1,102 @@
+---
+title: "Drought helpers"
+output: html_notebook
+---
+
+Helpers for both historic and projected drought visualizations. 
+
+```{r}
+library(docstring)
+petBalance<-function(source) {
+  #' PET and balance
+  #' 
+  #' Using thornthwaite, calculates potential evapotraspiration for each latitute. 
+  #' Balance is calculated as a difference between precipitation and PET value.
+  #' 
+  #' @param source file with latitute and precipitation data
+  #' @return same dataset completed with PET and balance calculations
+  combined<-data.frame(matrix(ncol = 10, nrow = 0))
+  lats<-unique(source$lat)
+  for(i in lats) {
+    filtered<-filter(source, lat==i)
+    filtered$PET<-thornthwaite(filtered$tasmean, i) #calculate potential evapotranspiration
+    filtered$BAL <- filtered$pr-filtered$PET        #calculate balance
+    combined<-rbind(combined, filtered)
+  }
+  write.csv(combined, "proj_126_pet_Uganda.csv", col.names = TRUE) #adapt title
+  return(combined)
+}
+docstring(petBalance)
+```
+
+```{r}
+droughts<-function(source) {
+  #' Droughts
+  #' 
+  #' Creates timeseries and calculates SPEI for 12 months for provided dataset.
+  #' 
+  #' @param source file with years and balance information
+  #' @return spei12 for provided period
+  
+  ts <- ts(source[,-c(1,2,3,4)], start=c(1981,1), frequency=12) #make time series for SPEI
+  spei12 <- spei(ts[,'BAL'], 12) #calculate SPEI for one year
+  return(spei12)
+}
+docstring(droughts)
+```
+
+```{r}
+simplify<-function(source) {
+  #' Simplify
+  #' 
+  #' Derives monthly precipitation and average temperature values. 
+  #' 
+  #' @param source file with daily values
+  #' @return monthly and yearly precipitation and temperature data
+  
+  #degress the models
+  pr_daily<-aggregate(pr ~ lon+lat+year+month+Date, source, mean, na.rm=TRUE)
+  #monthly mean
+  pr_month<-aggregate(pr ~ month+year, pr_daily, sum, na.rm=TRUE)
+  write.csv(pr_month, "proj_126_pr_monthly_droughts.csv") #adapt title
+  rm(pr_daily, pr_month) # to release memory
+  gc()
+  
+  
+  tas_daily<-aggregate(cbind(tasmax,tasmin) ~ lon+lat+year+month+Date, source, mean, na.rm=TRUE)
+  tas_month<-aggregate(cbind(tasmax,tasmin) ~ month+year+lon+lat, tas_daily, mean, na.rm=TRUE)
+  write.csv(tas_month, "proj_126_tas_monthly_droughts.csv") #adapt title
+  rm(tas_daily)
+  gc()
+  
+  pr_month<- read_csv("proj_126_pr_droughts.csv",  col_types = cols(...1 = col_skip()))
+  
+  data<-cbind(tas_month,pr_month$pr) 
+  colnames(data)<-c("month","year","lon","lat","tasmin","tasmax","pr")
+  data$tasmean <- (data$tasmax+data$tasmin)/2 
+  
+  return(data)
+}
+docstring(simplify)
+```
+
+```{r}
+graphPrep<-function(source, spei) {
+  #' Graph prep
+  #' 
+  #' Adjusts the spei data to have colors and month-year on the visualization.
+  #' 
+  #' @param source file with monthly values
+  #' @param spei file with spei12 values
+  #' @return dataframe a datastructure for red-blue visualization.
+  
+  df <- zoo::fortify.zoo(spei)
+  df <- df %>% 
+  dplyr::select(-Index) %>% 
+  dplyr::mutate(Period = zoo::as.yearmon(paste(source$year, source$month), "%Y %m")) %>% 
+  na.omit() %>% 
+  dplyr::mutate(sign = ifelse(fitted >= 0, "pos", "neg"))
+  return(df)
+}
+docstring(graphPrep)
+```

@@ -62,7 +62,7 @@ Called for projections only:
 
 ```{r}
 hot_units_proj<-function(source){
-  #' Hot units
+  #' Hot units (projections)
   #' 
   #' Core function called by `hot days` and `hot nights`. 
   #' Performs the grouping per lon, lat, year, month and model to count units. 
@@ -122,7 +122,6 @@ docstring(hot_units_proj)
 ```
 
 Called for historic values:
-
 ```{r}
 hot_units<-function(source){
   #' Hot units

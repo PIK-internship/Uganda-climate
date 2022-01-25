@@ -118,7 +118,6 @@ geom_tile(data = data_hot_days, aes(x = lon, y = lat, fill = count)) +
   facet_grid(scen ~ period) + #does the magic and plots different maps per defined variable
   theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
   theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
-
 ```
 
 Hot nights
@@ -147,6 +146,5 @@ geom_tile(data = data_hot_nights, aes(x = lon, y = lat, fill = count)) +
   facet_grid(scen ~ period) + #does the magic and plots different maps per defined variable
   theme(strip.text.x = element_text(size = 12, face = 'bold', family="DejaVu Sans")) +
   theme(strip.text.y = element_text(size = 12, face = 'bold', family="DejaVu Sans"))
-
 ```
 

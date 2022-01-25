@@ -1,0 +1,38 @@
+---
+title: "Helper functions for historic monthly means"
+output: html_notebook
+---
+
+This notebook contains functions repeatedly used in `Historical data_plot mean t and precip.Rmd`. 
+
+```{r}
+library(docstring)
+
+monthlyMeans<-function(source) {
+  #' Monthly means
+  #' 
+  #' Derives monthly precipitation and temperature means for provided dataset. Both variables are aggregated 
+  #' per month (no consideration of lon+lat). Furthermore, tas are averaged by (tasmax+tasmin)/2. 
+  #' 
+  #' @param source file with monthly precipitation and temperature data
+  #' @return file with precipitation and temperature data aggregated by months
+  
+  # Precipitation
+  monthly_means<-aggregate(pr ~ month, source, mean, na.rm=TRUE)
+
+  # Temperature
+  monthly_tas<-aggregate(cbind(tasmax,tasmin) ~ month, source, mean, na.rm=TRUE)
+  monthly_tas$tas<-rowMeans(monthly_tas[,c('tasmin','tasmax')], na.rm=TRUE)
+  
+  # Combine
+  monthly_means$tas<-monthly_tas$tas
+  # data format:
+  # month | pr | tas
+  
+  return(monthly_means)
+}
+
+docstring(monthlyMeans)
+```
+
+

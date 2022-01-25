@@ -1,0 +1,79 @@
+---
+title: "Uganda droughts (hist)"
+output: html_notebook
+---
+
+
+
+```{r}
+library(SPEI)
+library(ggplot2) #for mapping with ggplot
+library(scales)  #for colour scales
+library(RColorBrewer) #for colour scales
+library(zoo)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+```
+
+
+
+```{r}
+#load daily data
+ISIMIP_daily_ll<-read.csv("1979-2019_daily_Uganda.csv", header =TRUE)
+
+#monthly mean
+pr_month<-aggregate(pr ~ month+year, data=ISIMIP_daily_ll, sum, na.rm=TRUE)
+tas_month<-aggregate(cbind(tasmax,tasmin) ~ month+year+lon+lat, data=ISIMIP_daily_ll, mean, na.rm=TRUE)
+ISIMIP_monthly_ll<-cbind(tas_month,pr_month$pr) 
+colnames(ISIMIP_monthly_ll)<-c("month","year","lon","lat","tasmin","tasmax","pr")
+
+ISIMIP_monthly_ll$tasmean <- (ISIMIP_monthly_ll$tasmax+ISIMIP_monthly_ll$tasmin)/2 
+
+petBal<- petBalance(ISIMIP_monthly_ll)
+spei12<-droughts(petBal)
+df_spei12<-as.data.frame(spei12$fitted)
+df_spei12<- rename(df_spei12, fitted=`Series 1`)
+```
+
+Helpers
+```{r}
+petBalance<-function(source) {
+  combined<-data.frame(matrix(ncol = 10, nrow = 0))
+  lats<-unique(source$lat)
+  for(i in lats) {
+    filtered<-filter(source, lat==i)
+    filtered$PET<-thornthwaite(filtered$tasmean, i) #calculate potential evapotranspiration
+    filtered$BAL <- filtered$pr-filtered$PET        #calculate balance
+    combined<-rbind(combined, filtered)
+  }
+  write.csv(combined, "hist_pet_Uganda.csv", col.names = TRUE)
+  return(combined)
+}
+
+droughts<-function(source) {
+  ts <- ts(source[,-c(1,2,3,4)], start=c(1981,1), frequency=12) #make time series for SPEI
+  spei12 <- spei(ts[,'BAL'], 12) #calculate SPEI for one year
+  return(spei12)
+}
+```
+
+To map
+
+```{r}
+DF <- zoo::fortify.zoo(df_spei12)
+DF <- DF %>% 
+  dplyr::select(-Index) %>% 
+  dplyr::mutate(Period = zoo::as.yearmon(paste(ISIMIP_monthly_ll$year, ISIMIP_monthly_ll$month), "%Y %m")) %>% 
+  na.omit() %>% 
+  dplyr::mutate(sign = ifelse(fitted >= 0, "pos", "neg"))
+
+ggplot2::ggplot(DF) +
+  geom_bar(aes(x = Period, y = fitted, col = sign, fill = sign),
+            show.legend = F, stat = "identity") +
+  scale_color_manual(values = c("pos" = "darkblue", "neg" = "red")) +
+  scale_fill_manual(values = c("pos"  = "darkblue", "neg" = "red")) +
+  ylab("SPEI") + ggtitle("12-Month SPEI") +
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+```
+

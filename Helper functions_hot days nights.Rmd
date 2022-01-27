@@ -9,7 +9,7 @@ This file contains helper functions for `Hist_hot days nights.Rmd` and `Proj_hot
 ```{r}
 library(docstring)
 
-hot_days<-function(source, projected) {
+hotDays<-function(source, projected) {
   #' Hot days
   #' 
   #' Filters hot days (tasmax>=35 degrees Celsius) out of provided data and counts them. 
@@ -24,18 +24,18 @@ hot_days<-function(source, projected) {
   data_hot_days<-select(data_hot_days, lat, lon, year, month, tasmax) #get rid of irrelevant columns
   
   if(projected) {
-    data_hot_days<- hot_units_proj(data_hot_days) # count hot days per lat+lon+year+month
+    data_hot_days<- hotUnitsProj(data_hot_days) # count hot days per lat+lon+year+month
   } else {
-    data_hot_days<- hot_units(data_hot_days) # count hot days per lat+lon+year+month
+    data_hot_days<- hotUnits(data_hot_days) # count hot days per lat+lon+year+month
   }
   
   return(data_hot_days)
 }
-docstring(hot_days)
+docstring(hotDays)
 ```
 
 ```{r}
-hot_nights<-function(source, projected) {
+hotNights<-function(source, projected) {
   #' Hot nights
   #' 
   #' Filters hot nights (tasmin>=25 degrees Celsius) out of provided data and counts them. 
@@ -49,20 +49,20 @@ hot_nights<-function(source, projected) {
   data_hot_nights<-select(data_hot_nights, lat, lon, year, month, tasmin)
 
   if(projected) {
-      data_hot_nights<-hot_units_proj(data_hot_nights)   # count hot nights per lat+lon+year+month
+      data_hot_nights<-hotUnitsProj(data_hot_nights)   # count hot nights per lat+lon+year+month
   } else {
-      data_hot_nights<-hot_units(data_hot_nights)   # count hot nights per lat+lon+year+month
+      data_hot_nights<-hotUnits(data_hot_nights)   # count hot nights per lat+lon+year+month
   }
   
   return(data_hot_nights)
 }
-docstring(hot_nights)
+docstring(hotNights)
 ```
 
 Called for projections only:
 
 ```{r}
-hot_units_proj<-function(source){
+hotUnitsProj<-function(source){
   #' Hot units (projections)
   #' 
   #' Core function called by `hot days` and `hot nights`. 
@@ -119,13 +119,13 @@ hot_units_proj<-function(source){
   
   return(data_hot_units)
 }
-docstring(hot_units_proj)
+docstring(hotUnitsProj)
 ```
 
 Called for historic values:
 ```{r}
-hot_units<-function(source){
-  #' Hot units
+hotUnits<-function(source){
+  #' Hot units (annual)
   #' 
   #' Core function called by `hot days` and `hot nights`. 
   #' Performs the grouping per lon, lat, year, month to count units. 
@@ -150,7 +150,7 @@ hot_units<-function(source){
 
   return(data_hot_units)
 }
-docstring(hot_units)
+docstring(hotUnits)
 ```
 
 ```{r}

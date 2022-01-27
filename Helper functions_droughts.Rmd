@@ -30,6 +30,8 @@ petBalance<-function(source) {
 docstring(petBalance)
 ```
 
+
+
 ```{r}
 droughts<-function(source) {
   #' Droughts

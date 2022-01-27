@@ -46,11 +46,11 @@ Approach:
 
 ```{r}
 # Hot Days
-data_ssp370_hot_days<-hot_days(data_ssp370_t, TRUE)
+data_ssp370_hot_days<-hotDays(data_ssp370_t, TRUE)
 data_ssp370_hot_days$scen<-"ssp370"
 
 # Hot Nights
-data_ssp370_hot_nights<-hot_nights(data_ssp370_t, TRUE)
+data_ssp370_hot_nights<-hotNights(data_ssp370_t, TRUE)
 data_ssp370_hot_nights$scen<-"ssp370"
 ```
 
@@ -64,10 +64,10 @@ data_ssp126_t<-select(data_ssp126, lat, lon, year, month, tasmax, tasmin, scen, 
 Prepare it
 ```{r}
 # Get count of hot days across all unique lat&lon for year/month
-data_ssp126_hot_days<-hot_days(data_ssp126_t, TRUE)
+data_ssp126_hot_days<-hotDays(data_ssp126_t, TRUE)
 data_ssp126_hot_days$scen<-"ssp126"
 
-data_ssp126_hot_nights<-hot_nights(data_ssp126_t, TRUE)
+data_ssp126_hot_nights<-hotNights(data_ssp126_t, TRUE)
 data_ssp126_hot_nights$scen<-"ssp126"
 ```
 

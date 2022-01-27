@@ -1,10 +1,9 @@
 ---
 title: "Uganda droughts (proj)"
-author: "Albina Muzafarova"
-output: github_document
+output: html_notebook
 ---
 
-Current notebook should be used together with `Helper functions_droughts.Rmd`
+
 
 ```{r}
 library(SPEI)
@@ -23,18 +22,11 @@ library(dplyr)
 #load daily data
 daily_all370<-read.csv("alls_ssp370_2014-2100_daily.csv", header =TRUE)
 head(daily_all370)
-```
 
-Approach:
-- simplify data to have just mean temperature and precipitation values
-- means are derived by aggregating against lon+lat+year+month+Date
-- additionally, data is aggregated against month+year for precip (sum) and temperature (mean)
-
-```{r}
 #degress the models
 monthly370<-simplify(daily_all370)
 
-# calc spei
+# calc speimemoe
 petBal370<- petBalance(monthly370)
 spei12_370<-droughts(petBal370)
 df_spei12_370<-as.data.frame(spei12_370$fitted)
@@ -42,10 +34,8 @@ df_spei12_370<- rename(df_spei12_370, fitted=`Series 1`)
 df_370<-graphPrep(df_spei12_370)
 
 #write.csv(DF, "proj_370_spei_plotted_droughts.csv")
-```
 
-Repeat for ssp126
-```{r}
+
 #### for 126
 #load daily data
 daily_all_126<-read.csv("alls_ssp126_2014-2100_daily.csv", header =TRUE)
@@ -62,9 +52,65 @@ df_126<-graphPrep(monthly, df_spei12_126)
 #write.csv(df, "proj_126_spei_plotted_droughts.csv")
 ```
 
+Helpers
+```{r}
+petBalance<-function(source) {
+  combined<-data.frame(matrix(ncol = 10, nrow = 0))
+  lats<-unique(source$lat)
+  for(i in lats) {
+    filtered<-filter(source, lat==i)
+    filtered$PET<-thornthwaite(filtered$tasmean, i) #calculate potential evapotranspiration
+    filtered$BAL <- filtered$pr-filtered$PET        #calculate balance
+    combined<-rbind(combined, filtered)
+  }
+  write.csv(combined, "proj_126_pet_Uganda.csv", col.names = TRUE) #adapt title
+  return(combined)
+}
 
-# Map data
-First scenario
+droughts<-function(source) {
+  ts <- ts(source[,-c(1,2,3,4)], start=c(1981,1), frequency=12) #make time series for SPEI
+  spei12 <- spei(ts[,'BAL'], 12) #calculate SPEI for one year
+  return(spei12)
+}
+
+simplify<-function(source) {
+  #degress the models
+  pr_daily<-aggregate(pr ~ lon+lat+year+month+Date, source, mean, na.rm=TRUE)
+  #monthly mean
+  pr_month<-aggregate(pr ~ month+year, pr_daily, sum, na.rm=TRUE)
+  write.csv(pr_month, "proj_126_pr_monthly_droughts.csv") #adapt title
+  rm(pr_daily, pr_month) # to release memory
+  gc()
+  
+  
+  tas_daily<-aggregate(cbind(tasmax,tasmin) ~ lon+lat+year+month+Date, source, mean, na.rm=TRUE)
+  tas_month<-aggregate(cbind(tasmax,tasmin) ~ month+year+lon+lat, tas_daily, mean, na.rm=TRUE)
+  write.csv(tas_month, "proj_126_tas_monthly_droughts.csv") #adapt title
+  rm(tas_daily)
+  gc()
+  
+  pr_month<- read_csv("proj_126_pr_droughts.csv",  col_types = cols(...1 = col_skip()))
+  
+  data<-cbind(tas_month,pr_month$pr) 
+  colnames(data)<-c("month","year","lon","lat","tasmin","tasmax","pr")
+  data$tasmean <- (data$tasmax+data$tasmin)/2 
+  
+  return(data)
+}
+
+graphPrep<-function(source, spei) {
+  df <- zoo::fortify.zoo(spei)
+  df <- df %>% 
+  dplyr::select(-Index) %>% 
+  dplyr::mutate(Period = zoo::as.yearmon(paste(source$year, source$month), "%Y %m")) %>% 
+  na.omit() %>% 
+  dplyr::mutate(sign = ifelse(fitted >= 0, "pos", "neg"))
+  return(df)
+}
+```
+
+To map
+
 ```{r}
 ggplot2::ggplot(df_370) +
   geom_bar(aes(x = Period, y = fitted, col = sign, fill = sign),
@@ -74,7 +120,6 @@ ggplot2::ggplot(df_370) +
   ylab("SPEI") + ggtitle("12-Month SPEI with ssp370") +
   theme_bw() + theme(plot.title = element_text(hjust = 0.5))
 ```
-Second scenario
 ```{r}
 ggplot2::ggplot(df_126) +
   geom_bar(aes(x = Period, y = fitted, col = sign, fill = sign),

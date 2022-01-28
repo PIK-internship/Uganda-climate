@@ -7,6 +7,6 @@ This repository contains the R notebooks used to derive the following climate in
 
 The visualizations include maps with customized administrative units, climate graphs after Walter and Lieth, as well as SPEI-12. 
 
-The datasets used: daily and monthly historic (1979-2019) and daily data from 2019 to 2100 for ssp126 and ssp370 climate scenarios. 
+The datasets used: daily and monthly historic (1979-2019) and daily data from 2019 to 2100 for ssp126 and ssp370 climate scenarios. The ISIMIP files with projections are too large to be added here.
 
 The code was produced during the internship at Potsdam Institute for Climate Impact (PIK), AGRICA project.It is free to be used and reused. 

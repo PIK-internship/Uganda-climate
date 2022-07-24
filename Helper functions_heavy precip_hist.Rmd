@@ -19,7 +19,7 @@ heavyPrecip<-function(source) {
   pr_95<-aggregate(pr~lon+lat+lonlat, source, FUN = 'quantile', probs=c(95)/100) #select 95th percentile rain
 
    # find all days with heavy precip
-  res<-checker(pr_95, source)
+  res<-extremeChecker(pr_95, source)
   
   # aggregate to means
   res<-aggregate(pr~lon+lat+Date, res, mean, na.rm=TRUE)
